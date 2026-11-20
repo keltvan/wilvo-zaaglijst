@@ -1,0 +1,6 @@
+node_modules/
+*.pdf
+*.local.json
+*.local/
+*.local.mjs
+/eng.traineddata

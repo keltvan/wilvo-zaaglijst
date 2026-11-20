@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Zaaglijst">
+<title>Zaaglijst · inkoop</title>
+<link rel="icon" href="data:,">
+<style>
+  :root { --bg:#f3f4f6; --card:#fff; --ink:#111827; --mute:#6b7280; --line:#e5e7eb; --acc:#0b4ea2; --ok:#15803d; --warn:#b45309; --warnbg:#fef3c7; --bad:#b91c1c; --badbg:#fee2e2; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:16px/1.4 -apple-system, system-ui, "Segoe UI", Roboto, sans-serif; background:var(--bg); color:var(--ink); padding:env(safe-area-inset-top) 0 40px; }
+  header { background:var(--acc); color:#fff; padding:16px 20px; }
+  header h1 { margin:0; font-size:22px; }
+  header p { margin:2px 0 0; opacity:.85; font-size:14px; }
+  main { max-width:900px; margin:0 auto; padding:16px; }
+  .bar { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
+  button, .btn { font:inherit; font-weight:600; border:0; border-radius:12px; padding:14px 18px; min-height:52px; cursor:pointer; background:var(--card); color:var(--ink); box-shadow:0 1px 2px #0002; }
+  .primary { background:var(--acc); color:#fff; flex:1; text-align:center; }
+  h2 { font-size:15px; text-transform:uppercase; letter-spacing:.05em; color:var(--mute); margin:24px 4px 8px; }
+  .card { background:var(--card); border-radius:14px; padding:16px; margin-bottom:12px; box-shadow:0 1px 2px #0001; }
+  .row { display:flex; justify-content:space-between; gap:12px; align-items:baseline; }
+  .big { font-size:30px; font-weight:800; color:var(--acc); white-space:nowrap; }
+  .mute { color:var(--mute); font-size:14px; }
+  .code { font-weight:700; font-size:18px; }
+  .pill { display:inline-block; padding:2px 8px; border-radius:99px; font-size:13px; font-weight:600; margin:4px 4px 0 0; }
+  .warn { background:var(--warnbg); color:var(--warn); }
+  .bad { background:var(--badbg); color:var(--bad); }
+  .okp { background:#dcfce7; color:var(--ok); }
+  details { margin-top:10px; border-top:1px solid var(--line); padding-top:6px; }
+  summary { padding:10px 0; font-weight:600; cursor:pointer; min-height:44px; }
+  label { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:6px 0; }
+  input[type=number] { font:inherit; width:110px; padding:10px; border:1px solid #cbd5e1; border-radius:10px; text-align:right; }
+  input[type=checkbox] { width:28px; height:28px; }
+  .plan div { padding:8px 0; border-bottom:1px solid var(--line); font-variant-numeric:tabular-nums; }
+  .plan div:last-child { border:0; }
+  table { width:100%; border-collapse:collapse; font-size:14px; font-variant-numeric:tabular-nums; }
+  th, td { text-align:left; padding:8px 6px; border-bottom:1px solid var(--line); vertical-align:middle; }
+  th { color:var(--mute); font-weight:600; }
+  td input[type=number] { width:76px; padding:8px; }
+  tr.warn td { background:var(--warnbg); }
+  tr.bad td { background:var(--badbg); }
+  .empty { text-align:center; color:var(--mute); padding:40px 16px; }
+  .note { font-size:13px; color:var(--mute); margin:8px 4px; }
+  .x { background:none; box-shadow:none; color:var(--bad); padding:8px 12px; min-height:44px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Zaaglijst · inkoop</h1>
+  <p>Foto of PDF van de job in → aantal staven per profiel uit</p>
+</header>
+<main>
+  <div class="bar">
+    <label class="btn primary" for="cam">📷 Foto van job</label>
+    <input id="cam" type="file" accept="image/*" capture="environment" hidden>
+    <label class="btn" for="file">+ PDF / foto's</label>
+    <input id="file" type="file" accept="application/pdf,.pdf,image/*" multiple hidden>
+    <button id="copy">Kopieer bestellijst</button>
+    <button id="clear">Alles wissen</button>
+  </div>
+  <div id="msg"></div>
+  <div id="out"></div>
+</main>
+<script src="./vendor/tesseract/tesseract.min.js"></script>
+<script type="module">
+import * as pdfjs from './vendor/pdf.min.mjs';
+import { pdfLines, parseJob, cutBars, partKey } from './core.js';
+import { ocrLines } from './ocr.js';
+pdfjs.GlobalWorkerOptions.workerSrc = './vendor/pdf.worker.min.mjs';
+
+const KEY = 'zaaglijst.v1';
+const DEFAULTS = { bar: 6000, kerf: 3, trim: 0 };
+const state = Object.assign({ jobs: [], parts: {} }, JSON.parse(localStorage.getItem(KEY) || '{}'));
+const save = () => localStorage.setItem(KEY, JSON.stringify(state));
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmt = (n, d = 0) => Number(n).toLocaleString('nl-NL', { minimumFractionDigits: d, maximumFractionDigits: d });
+
+async function addFiles(e) {
+  const msgs = [], files = [...e.target.files];
+  e.target.value = '';
+  for (const [i, f] of files.entries()) {
+    try {
+      const isPdf = /pdf/i.test(f.type) || /.pdf$/i.test(f.name);
+      if (!isPdf) $('#msg').innerHTML = `<div class="card">Foto ${i + 1}/${files.length} lezen… (de eerste keer laden duurt langer)</div>`;
+      const lines = isPdf ? await pdfLines(new Uint8Array(await f.arrayBuffer()), pdfjs) : await ocrLines(f, l => parseJob(l).rows.length > 0);
+      const job = parseJob(lines, f.name);
+      job.scanned = !isPdf;
+      if (job.scanned && !job.rows.length) { msgs.push(`Foto ${i + 1} niet leesbaar. Maak een nieuwe foto: recht boven het papier, goed licht, scherp, de hele tabel in beeld.`); continue; }
+      // camera files are all called image.jpg: without a readable job number, never merge with another job
+      if (!/^\d{5,}$/.test(job.job)) job.job = `onbekend ${new Date().toLocaleTimeString('nl-NL')}`;
+      // same job again = next page or a re-scan: keep only rows we don't have yet
+      const have = state.jobs.find(j => j.job === job.job);
+      if (have) {
+        const sig = r => `${partKey(r.part)}|${r.qty}|${r.mmPer}`, known = new Set(have.rows.map(sig));
+        const fresh = job.rows.filter(r => !known.has(sig(r)));
+        have.rows.push(...fresh);
+        have.scanned ||= job.scanned;
+        msgs.push(fresh.length ? `Job ${job.job}: ${fresh.length} regel(s) toegevoegd aan bestaande job.` : `Job ${job.job} staat er al in, niets nieuws (${f.name}).`);
+      } else state.jobs.push(job);
+    } catch (err) {
+      msgs.push(`Kon ${f.name} niet lezen: ${err.message}`);
+    }
+  }
+  save(); render(msgs);
+}
+$('#file').addEventListener('change', addFiles);
+$('#cam').addEventListener('change', addFiles);
+$('#clear').onclick = () => { if (confirm('Alle jobs wissen? Instellingen per profiel blijven bewaard.')) { state.jobs = []; save(); render(); } };
+$('#copy').onclick = async () => {
+  const text = profiles().map(p => `${p.part}\t${p.desc}\t${p.badCheck ? 'NOG CONTROLEREN' : p.result.bars.length + ' st'} à ${p.s.bar} mm\t(${fmt(p.totalMm / 1000, 2)} m nodig)`).join('\n');
+  try { await navigator.clipboard.writeText(text); render(['Bestellijst gekopieerd.']); }
+  catch { prompt('Kopieer de bestellijst:', text); }
+};
+
+function settings(part, rows) {
+  const hint = rows.find(r => r.barHint)?.barHint;
+  const h = rows.find(r => r.height)?.height || 0;
+  return Object.assign({ ...DEFAULTS, bar: hint || DEFAULTS.bar, nest: false, offset: h }, state.parts[part]);
+}
+
+function profiles() {
+  const by = {};
+  for (const j of state.jobs) for (const r of j.rows) (by[partKey(r.part)] ||= []).push({ ...r, job: j.job });
+  return Object.values(by).map(rows => {
+    const part = rows[0].part;
+    const s = settings(part, rows);
+    const pieces = rows.flatMap(r => Array(Math.round(r.qty * r.perProduct)).fill({ len: r.mmPer / r.perProduct, mitre: r.mitre, job: r.job }));
+    const result = cutBars(pieces, { bar: s.bar, kerf: s.kerf, trim: s.trim, nestOffset: s.nest ? s.offset : 0 });
+    const desc = rows[0].desc.replace(/\s*onder.*verstek.*$/i, '').slice(0, 60);
+    return { part, desc, rows, s, pieces, result, totalMm: rows.reduce((a, r) => a + r.qty * r.mmPer, 0),
+      unsure: rows.filter(r => r.source !== 'tekst').length, badCheck: rows.filter(r => !r.check).length, mitre: rows.some(r => r.mitre) };
+  }).sort((a, b) => a.part.localeCompare(b.part));
+}
+
+function planHtml(p) {
+  const groups = {};
+  for (const b of p.result.bars) {
+    const k = b.pieces.map(x => fmt(x.len) + (x.mitre ? '∠' : '')).join(' · ') + ` — rest ${fmt(b.rest)} mm`;
+    groups[k] = (groups[k] || 0) + 1;
+  }
+  return Object.entries(groups).map(([k, n]) => `<div><b>${n}×</b> ${esc(k)}</div>`).join('');
+}
+
+function render(msgs = []) {
+  $('#msg').innerHTML = msgs.map(m => `<div class="card warn">${esc(m)}</div>`).join('');
+  if (!state.jobs.length) { $('#out').innerHTML = `<div class="card empty">Nog geen jobs.<br>Tik op <b>+ PDF's toevoegen</b> en kies één of meer Job Traveler PDF's.</div>`; return; }
+  const ps = profiles();
+  let h = `<h2>Bestellen (${ps.length} profielen, ${state.jobs.length} jobs)</h2>`;
+  for (const p of ps) {
+    const used = p.result.bars.reduce((a, b) => a + b.used, 0), avail = p.result.bars.length * (p.s.bar - p.s.trim);
+    h += `<div class="card" data-part="${esc(p.part)}">
+      <div class="row"><div><div class="code">${esc(p.part)}</div><div class="mute">${esc(p.desc)}</div></div>
+        <div style="text-align:right"><div class="big"${p.badCheck ? ' style="color:var(--bad)"' : ''}>${p.badCheck ? '?' : p.result.bars.length + ' st'}</div><div class="mute">à ${fmt(p.s.bar)} mm</div></div></div>
+      <div class="mute" style="margin-top:6px">${fmt(p.totalMm / 1000, 2)} m nodig · ${p.pieces.length} stuks · afval ${avail ? fmt(100 - used / avail * 100) : 0}%</div>
+      <div>${p.result.tooLong.length ? `<span class="pill bad">${p.result.tooLong.length} stuk(s) langer dan staaf!</span>` : ''}
+        ${p.badCheck ? `<span class="pill bad">${p.badCheck} rode regel(s): mm × aantal klopt niet. Eerst corrigeren bij de job hieronder, dan pas bestellen</span>` : ''}
+        ${p.unsure ? `<span class="pill warn">${p.unsure} regel(s): stuks per product aangenomen</span>` : ''}
+        ${p.mitre ? `<span class="pill ${p.s.nest ? 'okp' : 'warn'}">verstek${p.s.nest ? ` · in elkaar (−${fmt(p.s.offset)} mm)` : ' · niet in elkaar gerekend'}</span>` : ''}</div>
+      <details><summary>Zaagplan</summary><div class="plan">${planHtml(p)}</div></details>
+      <details><summary>Instellingen dit profiel</summary>
+        <label>Staaflengte (mm) <input type="number" data-k="bar" value="${p.s.bar}" min="1"></label>
+        <label>Zaagsnede (mm) <input type="number" data-k="kerf" value="${p.s.kerf}" min="0" step="0.5"></label>
+        <label>Onbruikbaar eind (mm) <input type="number" data-k="trim" value="${p.s.trim}" min="0"></label>
+        ${p.mitre ? `<label>Verstekstukken om-en-om zagen <input type="checkbox" data-k="nest" ${p.s.nest ? 'checked' : ''}></label>
+        <label>Winst per stuk (profielhoogte, mm) <input type="number" data-k="offset" value="${p.s.offset}" min="0"></label>` : ''}
+      </details></div>`;
+  }
+  h += `<p class="note">∠ = verstek. Oranje = controleren: het aantal stuks per product staat niet eenduidig op de job. Rood = getal verkeerd gelezen, eerst corrigeren. Pas het aan bij de job hieronder.</p>`;
+  h += `<h2>Jobs</h2>`;
+  for (const j of state.jobs) {
+    h += `<div class="card" data-job="${esc(j.job)}"><div class="row"><div><div class="code">Job ${esc(j.job)}</div><div class="mute">${esc(j.product)}</div></div>
+      <button class="x" data-del="${esc(j.job)}">Verwijder</button></div>
+      ${j.scanned ? '<span class="pill warn">Gescand: controleer aantal en mm tegen het papier</span>' : ''}
+      ${j.warnings.map(w => `<span class="pill bad">${esc(w)}</span>`).join('')}
+      <table><tr><th>Seq</th><th>Profiel</th><th>Aantal</th><th>mm/product</th><th>Stuks/product</th><th>Stuklengte</th></tr>
+      ${j.rows.map((r, i) => `<tr class="${!r.check ? 'bad' : r.source !== 'tekst' ? 'warn' : ''}"><td>${esc(r.seq)}</td><td>${esc(r.part)}${r.mitre ? ' ∠' : ''}</td><td><input type="number" min="0" data-row="${i}" data-f="qty" value="${r.qty}"></td>
+        <td><input type="number" min="0" step="0.1" data-row="${i}" data-f="mmPer" value="${r.mmPer}"></td><td><input type="number" min="1" step="1" data-row="${i}" data-f="perProduct" value="${r.perProduct}"></td><td>${fmt(r.mmPer / r.perProduct, 1)}</td></tr>`).join('')}
+      </table></div>`;
+  }
+  $('#out').innerHTML = h;
+}
+
+$('#out').addEventListener('change', e => {
+  const t = e.target, card = t.closest('[data-part],[data-job]');
+  if (t.dataset.k) {
+    const part = card.dataset.part, cur = (state.parts[part] ||= {});
+    cur[t.dataset.k] = t.type === 'checkbox' ? t.checked : Math.max(0, Number(t.value) || 0);
+  } else if (t.dataset.row) {
+    const row = state.jobs.find(j => j.job === card.dataset.job).rows[t.dataset.row];
+    const v = Math.max(0, Number(t.value) || 0);
+    if (t.dataset.f === 'perProduct') { row.perProduct = Math.max(1, Math.round(v)); row.source = 'tekst'; }
+    else { row[t.dataset.f] = v; row.check = true; } // checked by the sawyer against the paper
+  }
+  save(); render();
+});
+$('#out').addEventListener('click', e => {
+  const d = e.target.dataset.del;
+  if (d && confirm(`Job ${d} verwijderen?`)) { state.jobs = state.jobs.filter(j => j.job !== d); save(); render(); }
+});
+render();
+</script>
+</body>
+</html>
