@@ -3,6 +3,9 @@
 Versienummer staat rechtsboven in de app. Nieuwe functie = tweede cijfer omhoog, reparatie = derde cijfer.
 Elke versie heeft een git-tag (`v1.3.0` enz.), zodat je altijd terug kunt naar een vorige versie.
 
+## 1.3.3 — 2026-11-21
+- Zaagsneden en wiggen tussen de stukken tonen de gearceerde staaf in plaats van wit.
+
 ## 1.3.2 — 2026-11-21
 - Elke staaf wordt apart getekend (Staaf 1, 2, 3 …), ook als meerdere staven precies hetzelfde zijn ingedeeld.
 - Zijaanzicht altijd zichtbaar, ook bij rechte profielen.

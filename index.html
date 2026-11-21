@@ -119,7 +119,7 @@
 </head>
 <body>
 <header>
-  <h1>Zaaglijst · inkoop <a class="ver" href="https://github.com/keltvan/wilvo-zaaglijst/blob/main/CHANGELOG.md" target="_blank" rel="noopener" title="Wat is er veranderd">v1.3.2</a></h1>
+  <h1>Zaaglijst · inkoop <a class="ver" href="https://github.com/keltvan/wilvo-zaaglijst/blob/main/CHANGELOG.md" target="_blank" rel="noopener" title="Wat is er veranderd">v1.3.3</a></h1>
   <p>Foto of PDF van de job in → aantal staven per profiel uit</p>
 </header>
 <main>
@@ -235,9 +235,11 @@ function barSvg(b, p, v) {
   const X = mm => (4 + mm * sx).toFixed(1), ht = lite ? v.ht : Math.max(12, td * PX), hs = lite ? v.hs : Math.max(12, sd * PX);
   const y1 = lite ? 1 : 14, y2 = y1 + ht + (lite ? 8 : 18), y3 = (side ? y2 + hs : y1 + ht) + (lite ? 1 : 4), W = p.s.bar * sx + 8;
   const waste = (a, z) => z - a > 0.5 ? `<rect class="waste" x="${X(a)}" y="${y1}" width="${((z - a) * sx).toFixed(1)}" height="${ht}"/>` + (side ? `<rect class="waste" x="${X(a)}" y="${y2}" width="${((z - a) * sx).toFixed(1)}" height="${hs}"/>` : '') : '';
-  let s = `<svg width="${W.toFixed(0)}" height="${y3 + (lite ? 0 : 16)}" role="img" aria-label="Staafindeling"><defs><pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#f9fafb"/><line x1="0" y1="0" x2="0" y2="6" stroke="#d1d5db"/></pattern></defs>`;
+  let s = `<svg width="${W.toFixed(0)}" height="${y3 + (lite ? 0 : 16)}" role="img" aria-label="Staafindeling"><defs><pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#f1f5f9"/><line x1="0" y1="0" x2="0" y2="6" stroke="#94a3b8" stroke-width="1.5"/></pattern></defs>`;
   if (!lite) s += `<text x="4" y="10" fill="#6b7280">boven · ${fmt(td)}</text><text x="4" y="${y2 - 4}" fill="#6b7280">zij · ${fmt(sd)}</text>`;
-  s += waste(0, p.s.trim) + waste(b.end, p.s.bar);
+  // whole bar hatched underneath: saw cuts, wedges between slants, trim and rest all show as bar material
+  s += waste(0, p.s.bar);
+  for (const q of b.pieces) { const L = q.x + Math.min(q.ts, q.bs), R = q.x + Math.max(q.te, q.be); s += `<rect fill="#fff" x="${X(L)}" y="${y1}" width="${((R - L) * sx).toFixed(1)}" height="${ht}"/>`; }
   let over = ''; // edges and labels go on top of all pieces: nested pieces overlap in the top view
   for (const [i, q] of b.pieces.entries()) {
     const L = (q.x + Math.min(q.ts, q.bs)), R = q.x + Math.max(q.te, q.be), pc = lite && i % 2 ? 'pc pc2' : 'pc'; // alternate shade: each piece stands out
