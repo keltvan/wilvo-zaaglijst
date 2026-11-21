@@ -7,7 +7,10 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Zaaglijst">
 <title>Zaaglijst · inkoop</title>
-<link rel="icon" href="data:,">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0b4ea2">
 <style>
   :root { --bg:#f3f4f6; --card:#fff; --ink:#111827; --mute:#6b7280; --line:#e5e7eb; --acc:#0b4ea2; --ok:#15803d; --warn:#b45309; --warnbg:#fef3c7; --bad:#b91c1c; --badbg:#fee2e2; }
   * { box-sizing:border-box; }
@@ -44,6 +47,13 @@
   tr.bad td { background:var(--badbg); }
   .empty { text-align:center; color:var(--mute); padding:40px 16px; }
   .note { font-size:13px; color:var(--mute); margin:8px 4px; }
+  .phone { display:none; gap:20px; align-items:center; }
+  .phone img { flex:none; border:1px solid var(--line); border-radius:8px; }
+  .phone ol { margin:8px 0; padding-left:20px; }
+  @media (hover:hover) and (pointer:fine) { .phone { display:flex; } }
+  .install { display:flex; gap:12px; align-items:center; justify-content:space-between; }
+  .install[hidden] { display:none; }
+  @media (display-mode: standalone) { .phone, .install { display:none !important; } }
   .x { background:none; box-shadow:none; color:var(--bad); padding:8px 12px; min-height:44px; }
 </style>
 </head>
@@ -61,6 +71,14 @@
     <button id="copy">Kopieer bestellijst</button>
     <button id="clear">Alles wissen</button>
   </div>
+  <div class="card phone">
+    <img src="icons/qr.svg" width="150" height="150" alt="QR-code naar de Zaaglijst-app">
+    <div><b>Zaaglijst op je telefoon of tablet</b>
+      <ol><li>Scan de code met de camera van je telefoon.</li>
+        <li>Android: tik op <b>Installeren</b>. iPhone/iPad: tik op <b>Deel</b> en dan <b>Zet op beginscherm</b>.</li></ol>
+      <div class="mute">Daarna staat de Zaaglijst als app op je beginscherm.</div></div>
+  </div>
+  <div class="card install" id="install" hidden><span id="install-txt"></span><button id="install-btn" class="primary" style="flex:none" hidden>Installeren</button></div>
   <div id="msg"></div>
   <div id="out"></div>
 </main>
@@ -201,6 +219,18 @@ $('#out').addEventListener('click', e => {
   const d = e.target.dataset.del;
   if (d && confirm(`Job ${d} verwijderen?`)) { state.jobs = state.jobs.filter(j => j.job !== d); save(); render(); }
 });
+// install as app: Android/Chrome gives an install prompt, iOS needs Share > Add to Home Screen
+const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+let installEvt;
+addEventListener('beforeinstallprompt', e => {
+  e.preventDefault(); installEvt = e;
+  $('#install-txt').textContent = 'Zet de Zaaglijst als app op je beginscherm.';
+  $('#install-btn').hidden = false; $('#install').hidden = false;
+});
+$('#install-btn').onclick = async () => { if (!installEvt) return; installEvt.prompt(); await installEvt.userChoice; installEvt = null; $('#install').hidden = true; };
+addEventListener('appinstalled', () => { $('#install').hidden = true; });
+if (isIOS && !standalone) { $('#install-txt').innerHTML = 'Als app op je beginscherm: tik op <b>Deel</b> (vierkantje met pijl) en dan op <b>Zet op beginscherm</b>.'; $('#install').hidden = false; }
 render();
 </script>
 </body>

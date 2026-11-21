@@ -1,0 +1,18 @@
+{
+  "name": "Zaaglijst · inkoop",
+  "short_name": "Zaaglijst",
+  "description": "Foto of PDF van de job in, aantal staven per profiel uit",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f3f4f6",
+  "theme_color": "#0b4ea2",
+  "lang": "nl",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
