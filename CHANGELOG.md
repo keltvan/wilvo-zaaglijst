@@ -3,6 +3,12 @@
 Versienummer staat rechtsboven in de app. Nieuwe functie = tweede cijfer omhoog, reparatie = derde cijfer.
 Elke versie heeft een git-tag (`v1.3.0` enz.), zodat je altijd terug kunt naar een vorige versie.
 
+## 1.4.0 — 2026-11-21
+- Handgeschreven notities op de foto ("Onder 45° verstek zagen (2x)") worden herkend, ook als de OCR "verstek" verkeerd leest (Uersteh, verstck) en ook onder OPERATIONS. Eén materiaalregel: notitie wordt daarop toegepast (oranje: aangenomen). Meer regels: notitie wordt getoond.
+- Nieuwe kolom Verstek in de jobtabel: per regel recht / 1 kant / 2 kanten / ruit en de hoek zelf instellen.
+- Nieuw veld "schuin over" per profiel: de profielmaat waarover de schuine snede loopt, voor omschrijvingen zonder maat (zoals extrusieprofielen). Zonder maat telt de app de stukken als recht.
+- "2x 45°" wordt niet meer gelezen als profielmaat 2 × 45; "versteviging" telt niet als verstek.
+
 ## 1.3.3 — 2026-11-21
 - Zaagsneden en wiggen tussen de stukken tonen de gearceerde staaf in plaats van wit.
 

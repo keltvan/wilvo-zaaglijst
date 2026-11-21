@@ -73,6 +73,29 @@ assert.equal(cutBars([p(6500)], { bar: 6000 }).tooLong.length, 1);
   assert.ok(!/Page/.test(j.rows[0].desc));
 }
 
+// handwritten note under OPERATIONS, OCR'd imperfectly ("Uersteh"); one material row -> applied, marked assumed
+{
+  const j = parseJob([
+    'Job: 2',
+    '10 XX9934L60000 ) Extrusion Serv FLR MKII L=6000 20 12500 MM 25.00 M MWIHFMA 10 Backflush',
+    'OPERATIONS Setup Prod.',
+    '10 ZAAG Zagen 20.00 1.00 0.10 167',
+    'Onder 45° Uersteh Zager (2x)',
+  ]);
+  const r = j.rows[0];
+  assert.deepEqual([r.mmPer, r.barHint, r.mitre, r.cut.a, r.cut.shape, r.cut.d, r.cut.sure], [1250, 6000, true, [45, 45], 'trapeze', 0, false]);
+  assert.equal(j.notes.length, 1);
+  // no profile size yet: nesting falls back to square ends instead of guessing
+  assert.equal(cutBars([{ len: 1250, cut: r.cut }, { len: 1250, cut: r.cut }], { bar: 6000, nest: true }).bars[0].end, 2500);
+  // two rows: note shown, not applied to either
+  const k = parseJob(['Job: 3', '10 XX9934L60000 a 20 1250.0 MM 25.00 M', '20 XX9934L60000 b 20 1000.0 MM 20.00 M', 'OPERATIONS', 'Onder 45° verstek zagen']);
+  assert.deepEqual([k.rows[0].mitre, k.rows[1].mitre, k.notes.length], [false, false, 1]);
+  // not a mitre: "versteviging"; and "2x 45°" is no profile size
+  assert.equal(parseJob(['Job: 4', '10 XX1234567 verstevigingsstrip 4 100.0 MM 0.40 M']).rows[0].mitre, false);
+  assert.equal(cutShape('Extrusion 2x 45° verstek').d, 0);
+  assert.equal(cutShape('Koker 60x 40x3 (1x) 45° verstek').a[1], 0);
+}
+
 // real PDFs, expected values per job number
 // Expected values per job live in test-expect.local.json (customer data, not committed).
 const expect = process.argv.length > 2 ? JSON.parse(fs.readFileSync(new URL('./test-expect.local.json', import.meta.url))) : {};

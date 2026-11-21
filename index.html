@@ -73,6 +73,10 @@
   .sw span::after { content:''; position:absolute; left:3px; top:3px; width:16px; height:16px; border-radius:50%; background:#fff; transition:.15s; }
   .sw input:checked + span { background:var(--acc); } .sw input:checked + span::after { left:21px; } .sw input:focus-visible + span { outline:2px solid var(--acc); outline-offset:2px; }
   .ver { font-size:13px; font-weight:400; color:#fff; opacity:.7; text-decoration:none; margin-left:6px; vertical-align:middle; } .ver:hover { opacity:1; text-decoration:underline; }
+  .tw { overflow-x:auto; }
+  td.vk { white-space:nowrap; } td.vk select { font:inherit; font-size:14px; padding:7px 6px; border:1px solid #cbd5e1; border-radius:10px; background:#fff; }
+  td.vk input[type=number] { width:62px; margin-left:6px; }
+  input.need { border-color:#f59e0b !important; background:var(--warnbg); }
   .primary small { font-weight:400; opacity:.8; margin-left:6px; }
   .det.pick { display:flex; align-items:center; justify-content:center; min-height:300px; color:var(--mute); font-size:18px; }
   .calc { display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; padding:12px 14px; margin:10px 0 4px; background:#f8fafc; border:1px solid var(--line); border-radius:12px; font-variant-numeric:tabular-nums; }
@@ -119,7 +123,7 @@
 </head>
 <body>
 <header>
-  <h1>Zaaglijst · inkoop <a class="ver" href="https://github.com/keltvan/wilvo-zaaglijst/blob/main/CHANGELOG.md" target="_blank" rel="noopener" title="Wat is er veranderd">v1.3.3</a></h1>
+  <h1>Zaaglijst · inkoop <a class="ver" href="https://github.com/keltvan/wilvo-zaaglijst/blob/main/CHANGELOG.md" target="_blank" rel="noopener" title="Wat is er veranderd">v1.4.0</a></h1>
   <p>Foto of PDF van de job in → aantal staven per profiel uit</p>
 </header>
 <main>
@@ -205,15 +209,18 @@ function profiles() {
   return Object.values(by).map(rows => {
     const part = rows[0].part;
     const s = settings(part, rows);
-    const pieces = rows.flatMap(r => Array(Math.round(r.qty * r.perProduct)).fill({ len: r.mmPer / r.perProduct, mitre: r.mitre, cut: r.cut, seq: r.seq, job: r.job }));
+    // "schuin over" per profile overrides the size from the description (needed when the text has none)
+    const cutOf = r => r.cut ? { ...r.cut, d: s.cutD || r.cut.d } : null;
+    const pieces = rows.flatMap(r => Array(Math.round(r.qty * r.perProduct)).fill({ len: r.mmPer / r.perProduct, mitre: r.mitre, cut: cutOf(r), seq: r.seq, job: r.job }));
     const result = cutBars(pieces, { bar: s.bar, kerf: s.kerf, trim: s.trim, nest: s.nest });
     const plain = s.nest ? cutBars(pieces, { bar: s.bar, kerf: s.kerf, trim: s.trim }) : result;
-    const desc = rows[0].desc.replace(/\s*(onder\s+|\d\s*x\s*)?\d+(?:[.,]\d+)?\s*°.*$/i, '').slice(0, 60);
+    const desc = rows[0].desc.replace(/\s*·\s*notitie:.*$/, '').replace(/\s*(onder\s+|\d\s*x\s*)?\d+(?:[.,]\d+)?\s*°.*$/i, '')
+      .replace(/^[^\p{L}\d]+/u, '').slice(0, 60); // OCR junk like ") " before the text
     const dims = (desc.match(/(\d+(?:[.,]\d+)?)\s*x\s*(\d+(?:[.,]\d+)?)/i) || []).slice(1).map(v => parseFloat(v.replace(',', '.')));
-    const m = rows.filter(r => r.mitre);
+    const m = rows.filter(r => r.mitre), noSize = m.filter(r => r.cut?.shape && !cutOf(r).d).length;
     return { part, desc, rows, s, pieces, result, plain, dims, totalMm: rows.reduce((a, r) => a + r.qty * r.mmPer, 0),
       unsure: rows.filter(r => r.source !== 'tekst').length, badCheck: rows.filter(r => !r.check).length, mitre: m.length > 0,
-      shapeUnsure: m.filter(r => !r.cut?.sure).length };
+      shapeUnsure: m.filter(r => !r.cut?.sure && cutOf(r)?.d).length, noSize, autoD: m.find(r => r.cut?.d)?.cut.d || '' };
   }).sort((a, b) => a.part.localeCompare(b.part));
 }
 
@@ -262,6 +269,14 @@ function barSvg(b, p, v) {
   return s + '</svg>';
 }
 
+// Verstek per row, set by hand: for handwriting the photo can't read, or to confirm what the app assumed
+const kindOf = r => !r.mitre || !r.cut?.shape ? '' : r.cut.a[1] === 0 ? '1' : r.cut.shape === 'ruit' ? 'ruit' : '2';
+function mitreCell(r, i) {
+  const k = kindOf(r), opt = (v, t) => `<option value="${v}"${k === v ? ' selected' : ''}>${t}</option>`;
+  return `<select data-row="${i}" data-f="cutKind" aria-label="Verstek">${opt('', 'recht')}${opt('1', '1 kant')}${opt('2', '2 kanten')}${opt('ruit', 'ruit')}</select>`
+    + (k ? `<input type="number" min="1" max="89" step="0.5" data-row="${i}" data-f="cutAngle" value="${r.cut.a[0] || r.cut.a[1]}" aria-label="Hoek in graden" title="Hoek vanaf haaks${r.cut.a[0] !== r.cut.a[1] && r.cut.a[1] ? ` (nu ${r.cut.a.join('° en ')}°)` : ''}">°` : '');
+}
+
 // every bar is drawn, also identical ones: the sawyer counts them off one by one
 function planHtml(p) {
   return p.result.bars.map((b, i) => `<div><b>Staaf ${i + 1}</b> ${esc(b.pieces.map(q => fmt(q.len) + (q.mitre ? '∠' : '')).join(' · '))} — rest ${fmt(b.rest)} mm
@@ -272,7 +287,8 @@ const waste = p => { const used = p.result.bars.reduce((a, b) => a + b.used, 0),
 const pills = p => `${p.result.tooLong.length ? `<span class="pill bad">${p.result.tooLong.length} stuk(s) langer dan staaf!</span>` : ''}
   ${p.badCheck ? `<span class="pill bad">${p.badCheck} rode regel(s): mm × aantal klopt niet. Eerst corrigeren bij de job hieronder, dan pas bestellen</span>` : ''}
   ${p.unsure ? `<span class="pill warn">${p.unsure} regel(s): stuks per product aangenomen</span>` : ''}
-  ${p.shapeUnsure ? `<span class="pill warn">${p.shapeUnsure} schuine regel(s): vorm of zijde aangenomen, controleer de tekening</span>` : ''}`;
+  ${p.shapeUnsure ? `<span class="pill warn">${p.shapeUnsure} schuine regel(s): vorm of zijde aangenomen, controleer de tekening</span>` : ''}
+  ${p.noSize ? `<span class="pill warn">Profielmaat onbekend: vul bij instellingen "schuine snede over profielmaat" in</span>` : ''}`;
 const count = p => p.badCheck ? '?' : `${p.result.bars.length} × ${fmt(p.s.bar)}`;
 
 // Desktop: profile list left, the selected profile's bars right, drawn to the panel width.
@@ -303,7 +319,8 @@ function deskHtml(ps) {
     p.result.tooLong.length && ['bad', `${p.result.tooLong.length} te lang`, 'Stuk langer dan de staaf'],
     p.badCheck && ['bad', `${p.badCheck} rode regel${p.badCheck > 1 ? 's' : ''}`, 'mm × aantal klopt niet met de meters op de job. Corrigeer bij de job hieronder, dan pas bestellen.'],
     p.unsure && ['warn', `${p.unsure} aantal aangenomen`, 'Stuks per product staat niet eenduidig op de job; 1 aangenomen. Controleer bij de job hieronder.'],
-    p.shapeUnsure && ['warn', `${p.shapeUnsure} vorm aangenomen`, 'Zaagvorm of zijde van de schuinte niet eenduidig; controleer de tekening.'],
+    p.shapeUnsure && ['warn', `${p.shapeUnsure} vorm aangenomen`, 'Zaagvorm of zijde van de schuinte niet eenduidig; controleer de tekening. Stel het per regel in bij de job hieronder (kolom Verstek).'],
+    p.noSize && ['warn', 'maat schuine kant?', 'De omschrijving noemt geen profielmaat. Vul bij "schuin over" in over welke maat (mm) de schuine snede loopt; tot dan telt de app deze stukken als recht.'],
   ].filter(Boolean).map(([c, t, tip]) => `<span class="pill ${c}" title="${esc(tip)}">${t}</span>`).join('');
   return `<div class="desk"><nav class="plist">${list}</nav>
     <section class="card det" data-part="${esc(p.part)}">
@@ -314,7 +331,8 @@ function deskHtml(ps) {
         <span class="mute">afval ${waste(p)}%</span>${flags}
         <span class="set"><label>staaf <input type="number" data-k="bar" value="${p.s.bar}" min="1"></label>
         <label>zaagsnede <input type="number" data-k="kerf" value="${p.s.kerf}" min="0" step="0.5"></label>
-        <label>eind <input type="number" data-k="trim" value="${p.s.trim}" min="0"></label></span></div>
+        <label>eind <input type="number" data-k="trim" value="${p.s.trim}" min="0"></label>
+        ${p.mitre ? `<label title="Over welke profielmaat de schuine snede loopt">schuin over <input type="number" data-k="cutD" value="${p.s.cutD || ''}" placeholder="${p.autoD}" min="0"${p.noSize ? ' class="need"' : ''}></label>` : ''}</span></div>
       ${calcHtml(p)}
       ${p.s.nest ? `<div class="zoom"><button data-z="-" aria-label="Uitzoomen">−</button><span id="zl">100%</span><button data-z="+" aria-label="Inzoomen">+</button><button data-z="0">Passend</button>
         <span class="mute">Ctrl + scrollen = zoomen · slepen = schuiven</span></div>
@@ -360,6 +378,7 @@ function render(msgs = []) {
         <label>Staaflengte (mm) <input type="number" data-k="bar" value="${p.s.bar}" min="1"></label>
         <label>Zaagsnede (mm) <input type="number" data-k="kerf" value="${p.s.kerf}" min="0" step="0.5"></label>
         <label>Onbruikbaar eind (mm) <input type="number" data-k="trim" value="${p.s.trim}" min="0"></label>
+        ${p.mitre ? `<label>Schuine snede over profielmaat (mm) <input type="number" data-k="cutD" value="${p.s.cutD || ''}" placeholder="${p.autoD}" min="0"${p.noSize ? ' class="need"' : ''}></label>` : ''}
       </details></div>`;
   }
   h += `<p class="note">∠ = verstek. Oranje = controleren: het aantal stuks per product staat niet eenduidig op de job. Rood = getal verkeerd gelezen, eerst corrigeren. Pas het aan bij de job hieronder.</p>`;
@@ -369,10 +388,12 @@ function render(msgs = []) {
       <button class="x" data-del="${esc(j.job)}">Verwijder</button></div>
       ${j.scanned ? '<span class="pill warn">Gescand: controleer aantal en mm tegen het papier</span>' : ''}
       ${j.warnings.map(w => `<span class="pill bad">${esc(w)}</span>`).join('')}
-      <table><tr><th>Seq</th><th>Profiel</th><th>Aantal</th><th>mm/product</th><th>Stuks/product</th><th>Stuklengte</th></tr>
+      ${(j.notes || []).map(n => `<span class="pill warn" title="Gelezen van de foto; controleer of dit klopt">Notitie: “${esc(n)}”${j.rows.length > 1 ? ' — kies bij Verstek de juiste regel' : ''}</span>`).join('')}
+      <div class="tw"><table><tr><th>Seq</th><th>Profiel</th><th>Aantal</th><th>mm/product</th><th>Stuks/product</th><th>Stuklengte</th><th>Verstek</th></tr>
       ${j.rows.map((r, i) => `<tr class="${!r.check ? 'bad' : r.source !== 'tekst' ? 'warn' : ''}"><td>${esc(r.seq)}</td><td>${esc(r.part)}${r.mitre ? ' ∠' : ''}</td><td><input type="number" min="0" data-row="${i}" data-f="qty" value="${r.qty}"></td>
-        <td><input type="number" min="0" step="0.1" data-row="${i}" data-f="mmPer" value="${r.mmPer}"></td><td><input type="number" min="1" step="1" data-row="${i}" data-f="perProduct" value="${r.perProduct}"></td><td>${fmt(r.mmPer / r.perProduct, 1)}</td></tr>`).join('')}
-      </table></div>`;
+        <td><input type="number" min="0" step="0.1" data-row="${i}" data-f="mmPer" value="${r.mmPer}"></td><td><input type="number" min="1" step="1" data-row="${i}" data-f="perProduct" value="${r.perProduct}"></td><td>${fmt(r.mmPer / r.perProduct, 1)}</td>
+        <td class="vk">${mitreCell(r, i)}</td></tr>`).join('')}
+      </table></div></div>`;
   }
   $('#out').innerHTML = h;
   ro.disconnect();
@@ -393,6 +414,15 @@ $('#out').addEventListener('change', e => {
     const row = state.jobs.find(j => j.job === card.dataset.job).rows[t.dataset.row];
     const v = Math.max(0, Number(t.value) || 0);
     if (t.dataset.f === 'perProduct') { row.perProduct = Math.max(1, Math.round(v)); row.source = 'tekst'; }
+    else if (t.dataset.f === 'cutKind' || t.dataset.f === 'cutAngle') {
+      const kind = t.dataset.f === 'cutKind' ? t.value : kindOf(row);
+      const ang = t.dataset.f === 'cutAngle' ? Math.min(89, v) || 45 : row.cut?.a.find(x => x > 0) || 45;
+      if (!kind) { row.mitre = false; row.cut = null; }
+      else {
+        row.mitre = true; // set by hand = confirmed
+        row.cut = { a: kind === '1' ? [ang, 0] : [ang, ang], shape: kind === 'ruit' ? 'ruit' : 'trapeze', d: row.cut?.d || cutShape(row.desc).d, sure: true };
+      }
+    }
     else { row[t.dataset.f] = v; row.check = true; } // checked by the sawyer against the paper
   }
   save(); render();

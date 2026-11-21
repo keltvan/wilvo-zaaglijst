@@ -47,7 +47,7 @@ export function parseJob(rawLines, fileName = '') {
   // piece lengths a person wrote in the text: "L=1348", "lengte van 822 mm"
   const textLens = [...text.matchAll(/L\s*=\s*(\d+(?:[.,]\d+)?)|lengte van\s*(\d+(?:[.,]\d+)?)/gi)].map(m => num(m[1] || m[2]))
     .filter(v => v > 24); // "L=12" is the bar length in metres ("Koker 100x50x4 mm L=12"), not a piece length
-  const rows = [], warnings = [];
+  const rows = [], warnings = [], used = new Set();
   lines.forEach((line, i) => {
     const m = line.match(ROW);
     if (!m || !/\d{3}/.test(m[1])) {
@@ -55,16 +55,17 @@ export function parseJob(rawLines, fileName = '') {
       if (/\bM\s?M\b/.test(line)) warnings.push(`Regel niet herkend: "${line.slice(0, 80)}"`);
       return;
     }
+    used.add(i);
     // description = middle of the row + following lines up to the next row / section
     let desc = m[2].trim();
     for (let j = i + 1; j < lines.length && !ROW.test(lines[j]) && !/^OPERATIONS/i.test(lines[j]); j++) {
-      if (lines[j].length > 2 && !/^(Page|Date):/.test(lines[j])) desc += ' ' + lines[j];
+      if (lines[j].length > 2 && !/^(Page|Date):/.test(lines[j])) { desc += ' ' + lines[j]; used.add(j); }
     }
     const qty = num(m[3]);
     const seq = (line.slice(0, m.index + 1).match(/(\d+)\D*$/) || [])[1] || '?';
     const r = { seq, part: m[1], desc, qty, ...fixNumbers(qty, m[4], m[5]) };
     const mmPer = r.mmPer;
-    r.mitre = /verstek|\d\s*°/i.test(desc); // any angled cut ("2x 25° ruitvorm"), not only the word verstek
+    r.mitre = MITRE.test(desc);
     r.cut = r.mitre ? cutShape(desc) : null;
     const bar = num((desc.match(/L\s*=\s*(\d+(?:[.,]\d+)?)/) || [])[1]);
     r.barHint = bar >= 2000 ? bar : bar >= 3 && bar <= 24 ? bar * 1000 : null; // mm, or metres (L=12)
@@ -74,26 +75,46 @@ export function parseJob(rawLines, fileName = '') {
     rows.push(r);
   });
   if (!rows.length) warnings.push('Geen zaagmateriaal (MM/M) gevonden.');
-  return { job, product, rows, warnings };
+  // Notes elsewhere on the page, usually handwritten under OPERATIONS ("Onder 45° verstek zagen (2x)").
+  // Only one material row: the note can only mean that row (still marked as assumed). More rows: shown, not applied.
+  const notes = lines.filter((l, i) => !used.has(i) && NOTE.test(l));
+  if (notes.length && rows.length === 1 && !rows[0].mitre) {
+    const r = rows[0];
+    r.desc += ' · notitie: ' + notes.join(' · ');
+    r.mitre = true;
+    r.cut = { ...cutShape(r.desc), sure: false };
+  }
+  return { job, product, rows, warnings, notes };
 }
+
+// Any angled cut ("2x 25° ruitvorm"), not only the word verstek. VERSTEK also catches OCR of handwriting
+// (Uersteh, verstck) but not "versteviging".
+const VERSTEK = /\b[vu]erst[eaco][kh]\w*/gi;
+const MITRE = /\b[vu]erst[eaco][kh]|\d\s*°/i;
+const NOTE = /\b[vu]erst[eaco][kh]|\d\s*°.*zag/i;
+// profile size "100x 50"; not "2x 45°" (that is a count of angles)
+const DIMS = /(\d+(?:[.,]\d+)?)\s*x\s*(\d+(?:[.,]\d+)?)(?![\d.,]*\s*°)/i;
 
 // Angled ends from the description. Checked against CAD (seq "2x 25° ruitvorm tov brede zijde" on a 100x50 tube):
 // angle is from square, the slant runs across the SMALL side, and the job length is tip to tip.
 //   a: [left, right] angles; shape: 'ruit' (ends parallel) | 'trapeze' (ends mirrored) | null (unknown -> counted square);
 //   d: profile size the slant runs across; sure: false when shape or side was assumed.
 export function cutShape(desc) {
+  desc = desc.replace(VERSTEK, 'verstek'); // OCR of handwriting
   const pairs = [...desc.matchAll(/(\d)\s*x\s*(\d+(?:[.,]\d+)?)\s*°/gi)].flatMap(m => Array(+m[1]).fill(num(m[2])));
   const one = num((desc.match(/(\d+(?:[.,]\d+)?)\s*°/) || [])[1]);
-  const oneEnd = /aan een zijde/i.test(desc); // CAD seq "2x 25° aan een zijde": one end 25°, other end square
+  // CAD seq "2x 25° aan een zijde": one end 25°, other end square. Handwritten "(1x)" = one end, "(2x)" = both.
+  const oneEnd = /aan een zijde|\(\s*1\s*x\s*\)/i.test(desc);
   const a = oneEnd ? [one, 0] : pairs.length === 2 ? pairs : [one, one];
-  const dims = (desc.match(/(\d+(?:[.,]\d+)?)\s*x\s*(\d+(?:[.,]\d+)?)/i) || []).slice(1).map(num);
+  const dims = (desc.match(DIMS) || []).slice(1).map(num);
   const big = /tov smalle zijde/i.test(desc), small = /tov brede zijde/i.test(desc);
   const d = dims.length ? (big ? Math.max(...dims) : Math.min(...dims)) : 0; // unknown side: smaller saving = safe side
   let shape = /ruit/i.test(desc) ? 'ruit' : /trapez/i.test(desc) || oneEnd ? 'trapeze' : null;
   let sure = !!shape && (big || small || dims[0] === dims[1]);
   if (!shape && /verstek/i.test(desc)) { shape = 'trapeze'; sure = false; } // classic frame mitre, assumed
-  if (!(a[0] < 90 && a[1] < 90 && d)) shape = null;
-  return { a, shape, d, sure: sure && !!shape };
+  if (!(a[0] < 90 && a[1] < 90)) shape = null;
+  // d = 0: profile size not in the text; the shape is kept, nesting waits until the size is filled in per profile
+  return { a, shape, d, sure: sure && !!shape && d > 0 };
 }
 
 // How many pieces per product? Only trust it when exactly one written length divides evenly.
@@ -107,7 +128,7 @@ export function guessPieces(mmPer, textLens) {
 // aL/aR = end angles. Four ways to lay it on the saw: as is, turned over, end for end, both.
 const rad = a => a * Math.PI / 180;
 function poses(p, nest) {
-  const c = nest && p.cut?.shape ? p.cut : null, L = p.len;
+  const c = nest && p.cut?.shape && p.cut.d > 0 ? p.cut : null, L = p.len;
   if (!c) return [{ ts: 0, te: L, bs: 0, be: L, aL: 0, aR: 0 }];
   const oL = c.d * Math.tan(rad(c.a[0])), oR = c.d * Math.tan(rad(c.a[1])), tr = c.shape === 'trapeze';
   const o = { ts: oL, te: tr ? L - oR : L, bs: 0, be: tr ? L : L - oR, aL: c.a[0], aR: c.a[1] };
