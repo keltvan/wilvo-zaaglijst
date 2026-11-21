@@ -75,7 +75,7 @@
   .ver { font-size:13px; font-weight:400; color:#fff; opacity:.7; text-decoration:none; margin-left:6px; vertical-align:middle; } .ver:hover { opacity:1; text-decoration:underline; }
   .tw { overflow-x:auto; }
   td.vk { white-space:nowrap; } td.vk select { font:inherit; font-size:14px; padding:7px 6px; border:1px solid #cbd5e1; border-radius:10px; background:#fff; }
-  td.vk input[type=number] { width:62px; margin-left:6px; }
+  td.vk input[type=number] { width:62px; margin-left:6px; } td.vk .ov { margin-left:10px; color:var(--mute); font-size:13px; }
   input.need { border-color:#f59e0b !important; background:var(--warnbg); }
   .primary small { font-weight:400; opacity:.8; margin-left:6px; }
   .det.pick { display:flex; align-items:center; justify-content:center; min-height:300px; color:var(--mute); font-size:18px; }
@@ -123,7 +123,7 @@
 </head>
 <body>
 <header>
-  <h1>Zaaglijst · inkoop <a class="ver" href="https://github.com/keltvan/wilvo-zaaglijst/blob/main/CHANGELOG.md" target="_blank" rel="noopener" title="Wat is er veranderd">v1.4.0</a></h1>
+  <h1>Zaaglijst · inkoop <a class="ver" href="https://github.com/keltvan/wilvo-zaaglijst/blob/main/CHANGELOG.md" target="_blank" rel="noopener" title="Wat is er veranderd">v1.4.1</a></h1>
   <p>Foto of PDF van de job in → aantal staven per profiel uit</p>
 </header>
 <main>
@@ -271,10 +271,16 @@ function barSvg(b, p, v) {
 
 // Verstek per row, set by hand: for handwriting the photo can't read, or to confirm what the app assumed
 const kindOf = r => !r.mitre || !r.cut?.shape ? '' : r.cut.a[1] === 0 ? '1' : r.cut.shape === 'ruit' ? 'ruit' : '2';
+// profile settings are stored under the first spelling of the part (see profiles())
+const profileOf = r => { for (const j of state.jobs) for (const x of j.rows) if (partKey(x.part) === partKey(r.part)) return x.part; return r.part; };
 function mitreCell(r, i) {
   const k = kindOf(r), opt = (v, t) => `<option value="${v}"${k === v ? ' selected' : ''}>${t}</option>`;
-  return `<select data-row="${i}" data-f="cutKind" aria-label="Verstek">${opt('', 'recht')}${opt('1', '1 kant')}${opt('2', '2 kanten')}${opt('ruit', 'ruit')}</select>`
-    + (k ? `<input type="number" min="1" max="89" step="0.5" data-row="${i}" data-f="cutAngle" value="${r.cut.a[0] || r.cut.a[1]}" aria-label="Hoek in graden" title="Hoek vanaf haaks${r.cut.a[0] !== r.cut.a[1] && r.cut.a[1] ? ` (nu ${r.cut.a.join('° en ')}°)` : ''}">°` : '');
+  let h = `<select data-row="${i}" data-f="cutKind" aria-label="Verstek">${opt('', 'recht')}${opt('1', '1 kant')}${opt('2', '2 kanten')}${opt('ruit', 'ruit')}</select>`;
+  if (!k) return h;
+  h += `<input type="number" min="1" max="89" step="0.5" data-row="${i}" data-f="cutAngle" value="${r.cut.a[0] || r.cut.a[1]}" aria-label="Hoek in graden" title="Hoek vanaf haaks${r.cut.a[0] !== r.cut.a[1] && r.cut.a[1] ? ` (nu ${r.cut.a.join('° en ')}°)` : ''}">°`;
+  // without the profile size the slant can't be drawn or nested: ask for it right here (stored per profile)
+  const part = profileOf(r), d = state.parts[part]?.cutD;
+  return h + `<span class="ov" data-part="${esc(part)}">over <input type="number" min="0" data-k="cutD" value="${d || ''}" placeholder="${r.cut.d || ''}" aria-label="Profielmaat waarover de schuine snede loopt (mm)"${d || r.cut.d ? '' : ' class="need"'}> mm</span>`;
 }
 
 // every bar is drawn, also identical ones: the sawyer counts them off one by one
