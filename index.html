@@ -72,6 +72,7 @@
   .sw input { position:absolute; opacity:0; } .sw span { width:40px; height:22px; border-radius:11px; background:#d1d5db; position:relative; transition:.15s; }
   .sw span::after { content:''; position:absolute; left:3px; top:3px; width:16px; height:16px; border-radius:50%; background:#fff; transition:.15s; }
   .sw input:checked + span { background:var(--acc); } .sw input:checked + span::after { left:21px; } .sw input:focus-visible + span { outline:2px solid var(--acc); outline-offset:2px; }
+  .ver { font-size:13px; font-weight:400; color:#fff; opacity:.7; text-decoration:none; margin-left:6px; vertical-align:middle; } .ver:hover { opacity:1; text-decoration:underline; }
   .primary small { font-weight:400; opacity:.8; margin-left:6px; }
   .det.pick { display:flex; align-items:center; justify-content:center; min-height:300px; color:var(--mute); font-size:18px; }
   .sw.off { opacity:.45; cursor:not-allowed; }
@@ -119,7 +120,7 @@
 </head>
 <body>
 <header>
-  <h1>Zaaglijst · inkoop</h1>
+  <h1>Zaaglijst · inkoop <a class="ver" href="https://github.com/keltvan/wilvo-zaaglijst/blob/main/CHANGELOG.md" target="_blank" rel="noopener" title="Wat is er veranderd">v1.3.0</a></h1>
   <p>Foto of PDF van de job in → aantal staven per profiel uit</p>
 </header>
 <main>
