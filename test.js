@@ -40,6 +40,20 @@ assert.equal(cutBars([p(6500)], { bar: 6000 }).tooLong.length, 1);
   assert.deepEqual(parseJob(['10 ABC123456 x 4 garbage MM']).warnings.length, 2); // unreadable MM line is reported
 }
 
+// "L=12" = 12 m bar, not a 12 mm piece; "25°" without the word verstek is still an angled cut; page headers stay out of desc
+{
+  const j = parseJob([
+    'Job: 1',
+    '10 XK10005004L12 S355 Koker 100x 50x4 mm L=12 5 937.0 MM 4.69 M',
+    '2x 25° ruitvorm tov brede zijde',
+    'Page: 2 / 3',
+    'Date: 01/01/2026 Job Traveler',
+    '20 XP06012 S355 Plat 60x12 5 60.0 MM 0.30 M',
+  ]);
+  assert.deepEqual(j.rows.map(r => [r.barHint, r.mitre, r.perProduct]), [[12000, true, 1], [null, false, 1]]);
+  assert.ok(!/Page/.test(j.rows[0].desc));
+}
+
 // real PDFs, expected values per job number
 // Expected values per job live in test-expect.local.json (customer data, not committed).
 const expect = process.argv.length > 2 ? JSON.parse(fs.readFileSync(new URL('./test-expect.local.json', import.meta.url))) : {};

@@ -45,7 +45,8 @@ export function parseJob(rawLines, fileName = '') {
   const job = (text.match(/Job:\s*(\d+)/) || [])[1] || fileName;
   const product = ((text.match(/Description:\s*(.*)/) || [])[1] || '').replace(/\s+For (Order|Stock).*/, '').trim();
   // piece lengths a person wrote in the text: "L=1348", "lengte van 822 mm"
-  const textLens = [...text.matchAll(/L\s*=\s*(\d+(?:[.,]\d+)?)|lengte van\s*(\d+(?:[.,]\d+)?)/gi)].map(m => num(m[1] || m[2]));
+  const textLens = [...text.matchAll(/L\s*=\s*(\d+(?:[.,]\d+)?)|lengte van\s*(\d+(?:[.,]\d+)?)/gi)].map(m => num(m[1] || m[2]))
+    .filter(v => v > 24); // "L=12" is the bar length in metres ("Koker 100x50x4 mm L=12"), not a piece length
   const rows = [], warnings = [];
   lines.forEach((line, i) => {
     const m = line.match(ROW);
@@ -57,16 +58,16 @@ export function parseJob(rawLines, fileName = '') {
     // description = middle of the row + following lines up to the next row / section
     let desc = m[2].trim();
     for (let j = i + 1; j < lines.length && !ROW.test(lines[j]) && !/^OPERATIONS/i.test(lines[j]); j++) {
-      if (lines[j].length > 2) desc += ' ' + lines[j];
+      if (lines[j].length > 2 && !/^(Page|Date):/.test(lines[j])) desc += ' ' + lines[j];
     }
     const qty = num(m[3]);
     const seq = (line.slice(0, m.index + 1).match(/(\d+)\D*$/) || [])[1] || '?';
     const r = { seq, part: m[1], desc, qty, ...fixNumbers(qty, m[4], m[5]) };
     const mmPer = r.mmPer;
-    r.mitre = /verstek/i.test(desc);
+    r.mitre = /verstek|\d\s*°/i.test(desc); // any angled cut ("2x 25° ruitvorm"), not only the word verstek
     r.angle = r.mitre ? num((desc.match(/(\d+(?:[.,]\d+)?)\s*°/) || [])[1]) || null : null;
-    const bar = desc.match(/L\s*=\s*(\d{4,5})\b/);
-    r.barHint = bar && num(bar[1]) >= 2000 ? num(bar[1]) : null;
+    const bar = num((desc.match(/L\s*=\s*(\d+(?:[.,]\d+)?)/) || [])[1]);
+    r.barHint = bar >= 2000 ? bar : bar >= 3 && bar <= 24 ? bar * 1000 : null; // mm, or metres (L=12)
     const dim = desc.match(/(\d+(?:[.,]\d+)?)\s*x\s*(\d+(?:[.,]\d+)?)/i);
     r.height = dim ? num(dim[1]) : null;
     Object.assign(r, guessPieces(mmPer, textLens));
