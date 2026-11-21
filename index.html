@@ -70,11 +70,22 @@
   .sw input { position:absolute; opacity:0; } .sw span { width:40px; height:22px; border-radius:11px; background:#d1d5db; position:relative; transition:.15s; }
   .sw span::after { content:''; position:absolute; left:3px; top:3px; width:16px; height:16px; border-radius:50%; background:#fff; transition:.15s; }
   .sw input:checked + span { background:var(--acc); } .sw input:checked + span::after { left:21px; } .sw input:focus-visible + span { outline:2px solid var(--acc); outline-offset:2px; }
-  .det .br { display:grid; grid-template-columns:44px minmax(0,1fr) 80px; align-items:center; gap:10px; padding:12px 0; border-top:1px solid var(--line); }
-  .det .br > b { font-size:20px; color:var(--acc); } .det .br svg { display:block; font:12px system-ui, sans-serif; }
-  .det .tl { font-size:13px; color:var(--mute); margin-bottom:4px; white-space:pre; }
-  .det .rest { font-size:12px; color:var(--mute); text-align:right; } .det .rest b { display:block; font-size:15px; color:var(--ink); }
-  .det .pc { fill:#dbeafe; stroke:var(--acc); stroke-width:1; } .det .waste { fill:url(#hatch); stroke:#e5e7eb; }
+  .det .zoom { display:flex; gap:6px; align-items:center; margin:8px 0; }
+  .det .zoom button { min-height:32px; padding:4px 12px; border:1px solid var(--line); box-shadow:none; font-size:15px; }
+  .det .zoom #zl { min-width:52px; text-align:center; font-weight:700; font-variant-numeric:tabular-nums; }
+  .det .zoom .mute { margin-left:8px; font-size:12px; }
+  .det .br { padding:12px 0; border-top:1px solid var(--line); }
+  .det .bh { display:flex; align-items:baseline; gap:14px; margin-bottom:6px; }
+  .det .bh > b { font-size:20px; color:var(--acc); min-width:40px; }
+  .det .tl { font-size:13px; color:var(--mute); white-space:pre; }
+  .det .rest { margin-left:auto; font-size:13px; color:var(--mute); } .det .rest b { font-size:15px; color:var(--ink); }
+  .det .bv { display:grid; grid-template-columns:52px minmax(0,1fr); gap:8px; }
+  .det .vl { display:flex; flex-direction:column; gap:8px; padding-top:1px; }
+  .det .vl span { display:flex; flex-direction:column; justify-content:center; font-size:12px; font-weight:700; color:var(--ink); border-right:3px solid var(--acc); padding-right:6px; text-align:right; }
+  .det .vl small { font-weight:400; color:var(--mute); }
+  .det .vw { overflow-x:auto; cursor:grab; user-select:none; } .det .vw:active { cursor:grabbing; }
+  .det .vw svg { display:block; font:12px system-ui, sans-serif; }
+  .det .pc { fill:#dbeafe; stroke:var(--acc); stroke-width:1; } .det .pc2 { fill:#93c5fd; } .det .waste { fill:url(#hatch); stroke:#e5e7eb; }
   .nestbtn { display:inline-flex; gap:8px; align-items:center; padding:4px 0; font-weight:600; }
   table { width:100%; border-collapse:collapse; font-size:14px; font-variant-numeric:tabular-nums; }
   th, td { text-align:left; padding:8px 6px; border-bottom:1px solid var(--line); vertical-align:middle; }
@@ -195,29 +206,35 @@ function profiles() {
   }).sort((a, b) => a.part.localeCompare(b.part));
 }
 
-// One bar. Tablet: true scale (0.5 px/mm, angles true), scrolls sideways. Desktop (fitW): whole bar fits the width,
-// heights fixed so pieces stay readable; horizontal positions and slant offsets stay true.
-// Top view: the face lying up, dashed = edge underneath. Side view: the face where the slant shows.
-const PX = 0.5;
-function barSvg(b, p, fitW) {
+// sd = size the slant runs across (side view height), td = the other size (top view height)
+function viewDims(p) {
   const sd = p.pieces.find(x => x.cut?.d)?.cut.d || Math.min(...p.dims) || 20;
   const td = p.dims.length ? (sd === Math.min(...p.dims) ? Math.max(...p.dims) : Math.min(...p.dims)) : sd;
-  const lite = !!fitW, side = !lite || p.mitre; // desktop: no captions/ruler/seq; side view only when there are slants
-  const sx = lite ? (fitW - 8) / p.s.bar : PX;
-  const X = mm => (4 + mm * sx).toFixed(1), ht = lite ? 34 : Math.max(12, td * PX), hs = lite ? 18 : Math.max(12, sd * PX);
-  const y1 = lite ? 1 : 14, y2 = y1 + ht + (lite ? 3 : 18), y3 = (side ? y2 + hs : y1 + ht) + (lite ? 1 : 4), W = p.s.bar * sx + 8;
+  return { sd, td };
+}
+
+// One bar. Tablet: true scale (0.5 px/mm, angles true), scrolls sideways.
+// Desktop (v = {sx, ht, hs, seq}): scale and view heights chosen by the zoom; positions and slant offsets stay true.
+// Top view: the face lying up, dashed = edge underneath. Side view: the face where the slant shows.
+const PX = 0.5;
+function barSvg(b, p, v) {
+  const { sd, td } = viewDims(p);
+  const lite = !!v, side = !lite || p.mitre; // desktop: no captions/ruler; side view only when there are slants
+  const sx = lite ? v.sx : PX;
+  const X = mm => (4 + mm * sx).toFixed(1), ht = lite ? v.ht : Math.max(12, td * PX), hs = lite ? v.hs : Math.max(12, sd * PX);
+  const y1 = lite ? 1 : 14, y2 = y1 + ht + (lite ? 8 : 18), y3 = (side ? y2 + hs : y1 + ht) + (lite ? 1 : 4), W = p.s.bar * sx + 8;
   const waste = (a, z) => z - a > 0.5 ? `<rect class="waste" x="${X(a)}" y="${y1}" width="${((z - a) * sx).toFixed(1)}" height="${ht}"/>` + (side ? `<rect class="waste" x="${X(a)}" y="${y2}" width="${((z - a) * sx).toFixed(1)}" height="${hs}"/>` : '') : '';
   let s = `<svg width="${W.toFixed(0)}" height="${y3 + (lite ? 0 : 16)}" role="img" aria-label="Staafindeling"><defs><pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#f9fafb"/><line x1="0" y1="0" x2="0" y2="6" stroke="#d1d5db"/></pattern></defs>`;
   if (!lite) s += `<text x="4" y="10" fill="#6b7280">boven · ${fmt(td)}</text><text x="4" y="${y2 - 4}" fill="#6b7280">zij · ${fmt(sd)}</text>`;
   s += waste(0, p.s.trim) + waste(b.end, p.s.bar);
-  for (const q of b.pieces) {
-    const L = (q.x + Math.min(q.ts, q.bs)), R = q.x + Math.max(q.te, q.be);
-    s += `<rect class="pc" x="${X(q.x + q.ts)}" y="${y1}" width="${((q.te - q.ts) * sx).toFixed(1)}" height="${ht}"><title>${fmt(q.len, 1)} mm · seq ${esc(q.seq)} · job ${esc(q.job)}</title></rect>`;
+  for (const [i, q] of b.pieces.entries()) {
+    const L = (q.x + Math.min(q.ts, q.bs)), R = q.x + Math.max(q.te, q.be), pc = lite && i % 2 ? 'pc pc2' : 'pc'; // alternate shade: each piece stands out
+    s += `<rect class="${pc}" x="${X(q.x + q.ts)}" y="${y1}" width="${((q.te - q.ts) * sx).toFixed(1)}" height="${ht}"><title>${fmt(q.len, 1)} mm · seq ${esc(q.seq)} · job ${esc(q.job)}</title></rect>`;
     if (!lite) for (const e of [q.bs, q.be]) if (Math.abs(e - q.ts) > 0.5 && Math.abs(e - q.te) > 0.5) s += `<line class="hid" x1="${X(q.x + e)}" y1="${y1}" x2="${X(q.x + e)}" y2="${y1 + ht}"/>`;
-    if (side) s += `<polygon class="pc" points="${X(q.x + q.ts)},${y2} ${X(q.x + q.te)},${y2} ${X(q.x + q.be)},${y2 + hs} ${X(q.x + q.bs)},${y2 + hs}"/>`;
+    if (side) s += `<polygon class="${pc}" points="${X(q.x + q.ts)},${y2} ${X(q.x + q.te)},${y2} ${X(q.x + q.be)},${y2 + hs} ${X(q.x + q.bs)},${y2 + hs}"/>`;
     const label = fmt(q.len) + (q.mitre && !lite ? '∠' : ''), mid = X((L + R) / 2);
     if ((R - L) * sx > label.length * 7.5 + 4) s += `<text x="${mid}" y="${y1 + ht / 2 + 4}" text-anchor="middle">${label}</text>`;
-    if (!lite && (R - L) * sx > 40 && ht >= 30) s += `<text x="${mid}" y="${y1 + ht / 2 + 17}" text-anchor="middle" fill="#6b7280">seq ${esc(q.seq)}</text>`;
+    if ((!lite || v.seq) && (R - L) * sx > 50 && ht >= 30) s += `<text x="${mid}" y="${y1 + ht / 2 + 17}" text-anchor="middle" fill="#6b7280">seq ${esc(q.seq)}</text>`;
   }
   if (!lite) for (let m = 0; m <= p.s.bar; m += 1000) s += `<line x1="${X(m)}" y1="${y3}" x2="${X(m)}" y2="${y3 + 4}" stroke="#9ca3af"/><text x="${X(m)}" y="${y3 + 14}" text-anchor="${!m ? 'start' : m + 1000 > p.s.bar ? 'end' : 'middle'}" fill="#6b7280">${m / 1000} m</text>`;
   return s + '</svg>';
@@ -270,16 +287,31 @@ function deskHtml(ps) {
         <span class="set"><label>staaf <input type="number" data-k="bar" value="${p.s.bar}" min="1"></label>
         <label>zaagsnede <input type="number" data-k="kerf" value="${p.s.kerf}" min="0" step="0.5"></label>
         <label>eind <input type="number" data-k="trim" value="${p.s.trim}" min="0"></label></span></div>
+      <div class="zoom"><button data-z="-" aria-label="Uitzoomen">−</button><span id="zl">100%</span><button data-z="+" aria-label="Inzoomen">+</button><button data-z="0">Passend</button>
+        <span class="mute">Ctrl + scrollen = zoomen · slepen = schuiven</span></div>
       <div class="bars" data-for="${esc(p.part)}"></div></section></div>`;
 }
-function drawDesk(ps) {
+// zoom 1 = whole bar fits; higher = wider, and view heights grow until they are true scale (true angles)
+let zoom = 1;
+const ZMAX = 40;
+function drawDesk(ps, anchor) {
   const box = $('.det .bars'); if (!box) return;
-  const p = ps.find(x => x.part === box.dataset.for), w = box.clientWidth - 150;
+  const p = ps.find(x => x.part === box.dataset.for), { sd, td } = viewDims(p);
+  // keep the same spot in view: fraction of the bar at the centre (or under the mouse when zooming with the wheel)
+  const old = box.querySelector('.vw'), frac = anchor ?? (old ? (old.scrollLeft + old.clientWidth / 2) / old.scrollWidth : 0);
   drawnW = box.clientWidth;
+  const viewW = box.clientWidth - 60, sx = (viewW - 8) / p.s.bar * zoom;
+  const ht = Math.min(240, Math.max(36, td * sx)), hs = p.mitre ? Math.min(240, Math.max(36, sd * sx)) : 0;
+  const v = { sx, ht, hs, seq: zoom > 1 };
   const tally = b => { const t = new Map(); for (const q of b.pieces) { const k = fmt(q.len, q.len % 1 ? 1 : 0); t.set(k, (t.get(k) || 0) + 1); }
     return [...t].map(([k, c]) => `${c}× ${k}`).join('  ·  '); };
-  box.innerHTML = barGroups(p).map(({ n, b }) => `<div class="br"><b>${n}×</b><div><div class="tl">${tally(b)}</div>${barSvg(b, p, w)}</div><span class="rest">rest<b>${fmt(b.rest)}</b></span></div>`).join('');
+  const labels = `<div class="vl"><span style="height:${ht}px">boven<small>${fmt(td)}</small></span>${hs ? `<span style="height:${hs}px">zij<small>${fmt(sd)}</small></span>` : ''}</div>`;
+  box.innerHTML = barGroups(p).map(({ n, b }) => `<div class="br"><div class="bh"><b>${n}×</b><span class="tl">${tally(b)}</span><span class="rest">rest <b>${fmt(b.rest)}</b></span></div>
+    <div class="bv">${labels}<div class="vw">${barSvg(b, p, v)}</div></div></div>`).join('');
+  $('#zl').textContent = Math.round(zoom * 100) + '%';
+  for (const w of box.querySelectorAll('.vw')) w.scrollLeft = frac * w.scrollWidth - w.clientWidth / 2;
 }
+function setZoom(z, anchor) { zoom = Math.min(ZMAX, Math.max(1, z)); drawDesk(profiles(), anchor); }
 
 function render(msgs = []) {
   $('#msg').innerHTML = msgs.map(m => `<div class="card warn">${esc(m)}</div>`).join('');
@@ -337,10 +369,25 @@ $('#out').addEventListener('change', e => {
 });
 $('#out').addEventListener('click', e => {
   const s = e.target.closest('[data-sel]');
-  if (s) { sel = s.dataset.sel; render(); return; }
+  if (s) { if (s.dataset.sel !== sel) zoom = 1; sel = s.dataset.sel; render(); return; }
+  const z = e.target.dataset.z;
+  if (z) { setZoom(z === '+' ? zoom * 2 : z === '-' ? zoom / 2 : 1); return; }
   const d = e.target.dataset.del;
   if (d && confirm(`Job ${d} verwijderen?`)) { state.jobs = state.jobs.filter(j => j.job !== d); save(); render(); }
 });
+// drawing: ctrl+wheel zooms around the mouse, drag pans, all bars scroll together
+$('#out').addEventListener('wheel', e => {
+  const w = e.target.closest('.vw'); if (!w || !e.ctrlKey) return;
+  e.preventDefault();
+  const r = w.getBoundingClientRect(), frac = (w.scrollLeft + e.clientX - r.left) / w.scrollWidth;
+  setZoom(zoom * (e.deltaY < 0 ? 1.25 : 0.8), frac);
+  for (const v of document.querySelectorAll('.vw')) v.scrollLeft = frac * v.scrollWidth - (e.clientX - r.left); // mouse spot stays put
+}, { passive: false });
+let drag = null;
+$('#out').addEventListener('pointerdown', e => { const w = e.target.closest('.vw'); if (w && e.button === 0) { drag = { x: e.clientX, s: w.scrollLeft }; w.setPointerCapture(e.pointerId); } });
+$('#out').addEventListener('pointermove', e => { if (drag) for (const v of document.querySelectorAll('.vw')) v.scrollLeft = drag.s - (e.clientX - drag.x); });
+addEventListener('pointerup', () => { drag = null; });
+$('#out').addEventListener('scroll', e => { if (!e.target.classList?.contains('vw')) return; for (const v of document.querySelectorAll('.vw')) if (v !== e.target) v.scrollLeft = e.target.scrollLeft; }, true);
 // install as app: Android/Chrome gives an install prompt, iOS needs Share > Add to Home Screen
 const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
