@@ -3,6 +3,9 @@
 Versienummer staat rechtsboven in de app. Nieuwe functie = tweede cijfer omhoog, reparatie = derde cijfer.
 Elke versie heeft een git-tag (`v1.3.0` enz.), zodat je altijd terug kunt naar een vorige versie.
 
+## 1.5.2 — 2026-11-21
+- App-iconen in WILVO-stijl: de logoplaat (rode kap, donkerblauw vlak) met drie gezaagde stukken die om-en-om in elkaar liggen.
+
 ## 1.5.1 — 2026-11-21
 - Geen oranje markeringen en "controleer"-teksten meer. Rood alleen nog bij echte leesfouten; een ontbrekende hoogte is een neutraal label "hoogte invullen".
 - Boven- en zijaanzicht staan in de juiste verhouding (dikte : hoogte): één verticale schaal voor beide. Ingezoomd groeit dat door tot ware schaal.
