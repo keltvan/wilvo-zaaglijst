@@ -44,19 +44,37 @@
   .draw .pc { fill:#dbeafe; stroke:var(--acc); stroke-width:1; }
   .draw .hid { stroke:var(--acc); stroke-dasharray:3 3; }
   .draw .waste { fill:url(#hatch); stroke:#9ca3af; }
-  @media (min-width:1100px) { main { max-width:none; padding:16px 24px; } }
-  .desk { display:grid; grid-template-columns:300px 1fr; gap:16px; align-items:start; }
-  .plist { display:flex; flex-direction:column; gap:6px; position:sticky; top:12px; max-height:calc(100vh - 24px); overflow:auto; }
-  .pi { display:flex; justify-content:space-between; align-items:center; gap:8px; text-align:left; padding:10px 12px; min-height:0; font-weight:400; border-left:5px solid transparent; }
+  @media (min-width:1100px) {
+    main { max-width:none; padding:12px 24px; }
+    header { padding:10px 24px; } header p { display:none; }
+    .bar { margin-bottom:12px; } .bar > * { min-height:40px; padding:8px 16px; } .bar .primary { flex:none; }
+    #install, .note, #out > h2:first-child { display:none !important; }
+    main { position:relative; }
+    .phone { position:absolute; top:12px; right:24px; z-index:5; padding:4px 12px 4px 4px; gap:10px; font-size:14px; border-radius:12px; cursor:zoom-in; }
+    .phone img { width:40px; height:40px; border:0; transition:width .15s, height .15s; } .phone:hover img { width:200px; height:200px; }
+    .phone ol, .phone .mute { display:none; }
+  }
+  .desk { display:grid; grid-template-columns:280px 1fr; gap:16px; align-items:start; }
+  .plist { display:flex; flex-direction:column; gap:2px; position:sticky; top:12px; max-height:calc(100vh - 24px); overflow:auto; background:#fff; border-radius:14px; padding:6px; }
+  .pi { display:grid; grid-template-columns:10px 1fr auto; align-items:center; gap:10px; text-align:left; padding:10px; min-height:0; font-weight:400; box-shadow:none; border-radius:10px; background:none; }
+  .pi:hover { background:#f3f4f6; } .pi.sel { background:#dbeafe; }
+  .pi .pn { font-weight:700; min-width:0; } .pi small { display:block; font-weight:400; color:var(--mute); font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .pi .n { font-weight:700; white-space:nowrap; color:var(--acc); }
-  .pi.sel { background:#dbeafe; outline:2px solid var(--acc); }
-  .pi.iswarn { border-left-color:#f59e0b; } .pi.isbad { border-left-color:var(--bad); }
-  .det .ctl { display:flex; gap:20px; flex-wrap:wrap; align-items:center; margin:10px 0; padding:8px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
-  .det .ctl label { padding:0; gap:8px; font-weight:600; }
-  .det .ctl input[type=number] { width:90px; padding:6px 8px; }
-  .det .br { display:grid; grid-template-columns:40px 1fr 60px; align-items:center; gap:6px; padding:6px 0; border-bottom:1px solid var(--line); }
-  .det .br b { font-size:18px; } .det .br svg { display:block; font:12px system-ui, sans-serif; }
-  .det .pc { fill:#dbeafe; stroke:var(--acc); stroke-width:1; } .det .hid { stroke:var(--acc); stroke-dasharray:3 3; } .det .waste { fill:url(#hatch); stroke:#9ca3af; }
+  .dot { width:10px; height:10px; border-radius:50%; } .dot.ok { background:#22c55e; } .dot.warn { background:#f59e0b; } .dot.bad { background:var(--bad); }
+  .det .big small { font-size:16px; font-weight:600; color:var(--mute); }
+  .det .ctl { display:flex; gap:14px; flex-wrap:wrap; align-items:center; margin:12px 0 4px; }
+  .det .ctl .pill { margin:0; cursor:help; }
+  .det .set { margin-left:auto; display:flex; gap:12px; color:var(--mute); font-size:13px; }
+  .det .set label { padding:0; gap:6px; } .det .set input { width:72px; padding:4px 6px; font-size:13px; border-color:var(--line); }
+  .sw { padding:0; gap:8px; font-weight:700; cursor:pointer; justify-content:flex-start; }
+  .sw input { position:absolute; opacity:0; } .sw span { width:40px; height:22px; border-radius:11px; background:#d1d5db; position:relative; transition:.15s; }
+  .sw span::after { content:''; position:absolute; left:3px; top:3px; width:16px; height:16px; border-radius:50%; background:#fff; transition:.15s; }
+  .sw input:checked + span { background:var(--acc); } .sw input:checked + span::after { left:21px; } .sw input:focus-visible + span { outline:2px solid var(--acc); outline-offset:2px; }
+  .det .br { display:grid; grid-template-columns:44px 1fr 80px; align-items:center; gap:10px; padding:12px 0; border-top:1px solid var(--line); }
+  .det .br > b { font-size:20px; color:var(--acc); } .det .br svg { display:block; font:12px system-ui, sans-serif; }
+  .det .tl { font-size:13px; color:var(--mute); margin-bottom:4px; white-space:pre; }
+  .det .rest { font-size:12px; color:var(--mute); text-align:right; } .det .rest b { display:block; font-size:15px; color:var(--ink); }
+  .det .pc { fill:#dbeafe; stroke:var(--acc); stroke-width:1; } .det .waste { fill:url(#hatch); stroke:#e5e7eb; }
   .nestbtn { display:inline-flex; gap:8px; align-items:center; padding:4px 0; font-weight:600; }
   table { width:100%; border-collapse:collapse; font-size:14px; font-variant-numeric:tabular-nums; }
   th, td { text-align:left; padding:8px 6px; border-bottom:1px solid var(--line); vertical-align:middle; }
@@ -184,23 +202,24 @@ const PX = 0.5;
 function barSvg(b, p, fitW) {
   const sd = p.pieces.find(x => x.cut?.d)?.cut.d || Math.min(...p.dims) || 20;
   const td = p.dims.length ? (sd === Math.min(...p.dims) ? Math.max(...p.dims) : Math.min(...p.dims)) : sd;
-  const sx = fitW ? (fitW - 8) / p.s.bar : PX;
-  const X = mm => (4 + mm * sx).toFixed(1), ht = fitW ? 44 : Math.max(12, td * PX), hs = fitW ? 28 : Math.max(12, sd * PX);
-  const y1 = 14, y2 = y1 + ht + 18, y3 = y2 + hs + 4, W = p.s.bar * sx + 8;
-  const waste = (a, z) => z - a > 0.5 ? `<rect class="waste" x="${X(a)}" y="${y1}" width="${((z - a) * sx).toFixed(1)}" height="${ht}"/><rect class="waste" x="${X(a)}" y="${y2}" width="${((z - a) * sx).toFixed(1)}" height="${hs}"/>` : '';
-  let s = `<svg width="${W.toFixed(0)}" height="${y3 + 16}" role="img" aria-label="Staafindeling"><defs><pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#f3f4f6"/><line x1="0" y1="0" x2="0" y2="6" stroke="#9ca3af"/></pattern></defs>
-    <text x="4" y="10" fill="#6b7280">boven · ${fmt(td)}</text><text x="4" y="${y2 - 4}" fill="#6b7280">zij · ${fmt(sd)}</text>`;
+  const lite = !!fitW, side = !lite || p.mitre; // desktop: no captions/ruler/seq; side view only when there are slants
+  const sx = lite ? (fitW - 8) / p.s.bar : PX;
+  const X = mm => (4 + mm * sx).toFixed(1), ht = lite ? 34 : Math.max(12, td * PX), hs = lite ? 18 : Math.max(12, sd * PX);
+  const y1 = lite ? 1 : 14, y2 = y1 + ht + (lite ? 3 : 18), y3 = (side ? y2 + hs : y1 + ht) + (lite ? 1 : 4), W = p.s.bar * sx + 8;
+  const waste = (a, z) => z - a > 0.5 ? `<rect class="waste" x="${X(a)}" y="${y1}" width="${((z - a) * sx).toFixed(1)}" height="${ht}"/>` + (side ? `<rect class="waste" x="${X(a)}" y="${y2}" width="${((z - a) * sx).toFixed(1)}" height="${hs}"/>` : '') : '';
+  let s = `<svg width="${W.toFixed(0)}" height="${y3 + (lite ? 0 : 16)}" role="img" aria-label="Staafindeling"><defs><pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#f9fafb"/><line x1="0" y1="0" x2="0" y2="6" stroke="#d1d5db"/></pattern></defs>`;
+  if (!lite) s += `<text x="4" y="10" fill="#6b7280">boven · ${fmt(td)}</text><text x="4" y="${y2 - 4}" fill="#6b7280">zij · ${fmt(sd)}</text>`;
   s += waste(0, p.s.trim) + waste(b.end, p.s.bar);
   for (const q of b.pieces) {
     const L = (q.x + Math.min(q.ts, q.bs)), R = q.x + Math.max(q.te, q.be);
     s += `<rect class="pc" x="${X(q.x + q.ts)}" y="${y1}" width="${((q.te - q.ts) * sx).toFixed(1)}" height="${ht}"><title>${fmt(q.len, 1)} mm · seq ${esc(q.seq)} · job ${esc(q.job)}</title></rect>`;
-    for (const e of [q.bs, q.be]) if (Math.abs(e - q.ts) > 0.5 && Math.abs(e - q.te) > 0.5) s += `<line class="hid" x1="${X(q.x + e)}" y1="${y1}" x2="${X(q.x + e)}" y2="${y1 + ht}"/>`;
-    s += `<polygon class="pc" points="${X(q.x + q.ts)},${y2} ${X(q.x + q.te)},${y2} ${X(q.x + q.be)},${y2 + hs} ${X(q.x + q.bs)},${y2 + hs}"/>`;
-    const label = fmt(q.len) + (q.mitre ? '∠' : ''), mid = X((L + R) / 2);
+    if (!lite) for (const e of [q.bs, q.be]) if (Math.abs(e - q.ts) > 0.5 && Math.abs(e - q.te) > 0.5) s += `<line class="hid" x1="${X(q.x + e)}" y1="${y1}" x2="${X(q.x + e)}" y2="${y1 + ht}"/>`;
+    if (side) s += `<polygon class="pc" points="${X(q.x + q.ts)},${y2} ${X(q.x + q.te)},${y2} ${X(q.x + q.be)},${y2 + hs} ${X(q.x + q.bs)},${y2 + hs}"/>`;
+    const label = fmt(q.len) + (q.mitre && !lite ? '∠' : ''), mid = X((L + R) / 2);
     if ((R - L) * sx > label.length * 7.5 + 4) s += `<text x="${mid}" y="${y1 + ht / 2 + 4}" text-anchor="middle">${label}</text>`;
-    if ((R - L) * sx > 40 && ht >= 30) s += `<text x="${mid}" y="${y1 + ht / 2 + 17}" text-anchor="middle" fill="#6b7280">seq ${esc(q.seq)}</text>`;
+    if (!lite && (R - L) * sx > 40 && ht >= 30) s += `<text x="${mid}" y="${y1 + ht / 2 + 17}" text-anchor="middle" fill="#6b7280">seq ${esc(q.seq)}</text>`;
   }
-  for (let m = 0; m <= p.s.bar; m += 1000) s += `<line x1="${X(m)}" y1="${y3}" x2="${X(m)}" y2="${y3 + 4}" stroke="#9ca3af"/><text x="${X(m)}" y="${y3 + 14}" text-anchor="${!m ? 'start' : m + 1000 > p.s.bar ? 'end' : 'middle'}" fill="#6b7280">${m / 1000} m</text>`;
+  if (!lite) for (let m = 0; m <= p.s.bar; m += 1000) s += `<line x1="${X(m)}" y1="${y3}" x2="${X(m)}" y2="${y3 + 4}" stroke="#9ca3af"/><text x="${X(m)}" y="${y3 + 14}" text-anchor="${!m ? 'start' : m + 1000 > p.s.bar ? 'end' : 'middle'}" fill="#6b7280">${m / 1000} m</text>`;
   return s + '</svg>';
 }
 
@@ -231,26 +250,34 @@ let sel = null;
 function deskHtml(ps) {
   const p = ps.find(x => x.part === sel) || ps[0];
   sel = p.part;
-  const list = ps.map(x => `<button class="pi ${x.badCheck ? 'isbad' : x.unsure || x.shapeUnsure ? 'iswarn' : ''} ${x === p ? 'sel' : ''}" data-sel="${esc(x.part)}">
-    <span><b>${esc(x.part)}</b><br><span class="mute">${esc(x.desc)}</span></span><span class="n">${count(x)}</span></button>`).join('');
+  const dot = x => x.badCheck || x.result.tooLong.length ? 'bad' : x.unsure || x.shapeUnsure ? 'warn' : 'ok';
+  const list = ps.map(x => `<button class="pi ${x === p ? 'sel' : ''}" data-sel="${esc(x.part)}">
+    <i class="dot ${dot(x)}"></i><span class="pn">${esc(x.part)}<small>${esc(x.desc)}</small></span><span class="n">${count(x)}</span></button>`).join('');
+  // short flags; the full explanation is in the tooltip
+  const flags = [
+    p.result.tooLong.length && ['bad', `${p.result.tooLong.length} te lang`, 'Stuk langer dan de staaf'],
+    p.badCheck && ['bad', `${p.badCheck} rode regel${p.badCheck > 1 ? 's' : ''}`, 'mm × aantal klopt niet met de meters op de job. Corrigeer bij de job hieronder, dan pas bestellen.'],
+    p.unsure && ['warn', `${p.unsure} aantal aangenomen`, 'Stuks per product staat niet eenduidig op de job; 1 aangenomen. Controleer bij de job hieronder.'],
+    p.shapeUnsure && ['warn', `${p.shapeUnsure} vorm aangenomen`, 'Zaagvorm of zijde van de schuinte niet eenduidig; controleer de tekening.'],
+  ].filter(Boolean).map(([c, t, tip]) => `<span class="pill ${c}" title="${esc(tip)}">${t}</span>`).join('');
   return `<div class="desk"><nav class="plist">${list}</nav>
     <section class="card det" data-part="${esc(p.part)}">
-      <div class="row"><div><span class="code">${esc(p.part)}</span> <span class="mute">${esc(p.desc)}</span></div>
-        <div class="big"${p.badCheck ? ' style="color:var(--bad)"' : ''}>${count(p)} mm</div></div>
-      <div class="mute">${fmt(p.totalMm / 1000, 2)} m nodig · ${p.pieces.length} stuks · afval ${waste(p)}%</div>
-      <div>${pills(p)}</div>
-      <div class="ctl">${p.mitre ? `<label><input type="checkbox" data-k="nest" ${p.s.nest ? 'checked' : ''}> Nesten</label>` : ''}
-        <label>Staaf <input type="number" data-k="bar" value="${p.s.bar}" min="1"></label>
-        <label>Zaagsnede <input type="number" data-k="kerf" value="${p.s.kerf}" min="0" step="0.5"></label>
-        <label>Eind <input type="number" data-k="trim" value="${p.s.trim}" min="0"></label></div>
+      <div class="row"><div><div class="code">${esc(p.part)}</div><div class="mute">${esc(p.desc)}</div></div>
+        <div class="big"${p.badCheck ? ' style="color:var(--bad)"' : ''}>${count(p)}<small> mm</small></div></div>
+      <div class="ctl">
+        ${p.mitre ? `<label class="sw"><input type="checkbox" data-k="nest" ${p.s.nest ? 'checked' : ''}><span></span>Nesten</label>` : ''}
+        <span class="mute">${fmt(p.totalMm / 1000, 1)} m · ${p.pieces.length} st · afval ${waste(p)}%</span>${flags}
+        <span class="set"><label>staaf <input type="number" data-k="bar" value="${p.s.bar}" min="1"></label>
+        <label>zaagsnede <input type="number" data-k="kerf" value="${p.s.kerf}" min="0" step="0.5"></label>
+        <label>eind <input type="number" data-k="trim" value="${p.s.trim}" min="0"></label></span></div>
       <div class="bars" data-for="${esc(p.part)}"></div></section></div>`;
 }
 function drawDesk(ps) {
   const box = $('.det .bars'); if (!box) return;
-  const p = ps.find(x => x.part === box.dataset.for), w = box.clientWidth - 110;
-  const tally = b => { const t = new Map(); for (const q of b.pieces) { const k = fmt(q.len, q.len % 1 ? 1 : 0) + (q.mitre ? '∠' : ''); t.set(k, (t.get(k) || 0) + 1); }
-    return [...t].map(([k, c]) => `${c}× ${k}`).join(' · '); };
-  box.innerHTML = barGroups(p).map(({ n, b }) => `<div class="br"><b>${n}×</b><div><div class="mute">${tally(b)}</div>${barSvg(b, p, w)}</div><span class="mute">rest<br>${fmt(b.rest)}</span></div>`).join('');
+  const p = ps.find(x => x.part === box.dataset.for), w = box.clientWidth - 150;
+  const tally = b => { const t = new Map(); for (const q of b.pieces) { const k = fmt(q.len, q.len % 1 ? 1 : 0); t.set(k, (t.get(k) || 0) + 1); }
+    return [...t].map(([k, c]) => `${c}× ${k}`).join('  ·  '); };
+  box.innerHTML = barGroups(p).map(({ n, b }) => `<div class="br"><b>${n}×</b><div><div class="tl">${tally(b)}</div>${barSvg(b, p, w)}</div><span class="rest">rest<b>${fmt(b.rest)}</b></span></div>`).join('');
 }
 
 function render(msgs = []) {
