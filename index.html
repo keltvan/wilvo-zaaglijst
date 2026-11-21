@@ -44,6 +44,19 @@
   .draw .pc { fill:#dbeafe; stroke:var(--acc); stroke-width:1; }
   .draw .hid { stroke:var(--acc); stroke-dasharray:3 3; }
   .draw .waste { fill:url(#hatch); stroke:#9ca3af; }
+  @media (min-width:1100px) { main { max-width:none; padding:16px 24px; } }
+  .desk { display:grid; grid-template-columns:300px 1fr; gap:16px; align-items:start; }
+  .plist { display:flex; flex-direction:column; gap:6px; position:sticky; top:12px; max-height:calc(100vh - 24px); overflow:auto; }
+  .pi { display:flex; justify-content:space-between; align-items:center; gap:8px; text-align:left; padding:10px 12px; min-height:0; font-weight:400; border-left:5px solid transparent; }
+  .pi .n { font-weight:700; white-space:nowrap; color:var(--acc); }
+  .pi.sel { background:#dbeafe; outline:2px solid var(--acc); }
+  .pi.iswarn { border-left-color:#f59e0b; } .pi.isbad { border-left-color:var(--bad); }
+  .det .ctl { display:flex; gap:20px; flex-wrap:wrap; align-items:center; margin:10px 0; padding:8px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+  .det .ctl label { padding:0; gap:8px; font-weight:600; }
+  .det .ctl input[type=number] { width:90px; padding:6px 8px; }
+  .det .br { display:grid; grid-template-columns:40px 1fr 60px; align-items:center; gap:6px; padding:6px 0; border-bottom:1px solid var(--line); }
+  .det .br b { font-size:18px; } .det .br svg { display:block; font:12px system-ui, sans-serif; }
+  .det .pc { fill:#dbeafe; stroke:var(--acc); stroke-width:1; } .det .hid { stroke:var(--acc); stroke-dasharray:3 3; } .det .waste { fill:url(#hatch); stroke:#9ca3af; }
   .nestbtn { display:inline-flex; gap:8px; align-items:center; padding:4px 0; font-weight:600; }
   table { width:100%; border-collapse:collapse; font-size:14px; font-variant-numeric:tabular-nums; }
   th, td { text-align:left; padding:8px 6px; border-bottom:1px solid var(--line); vertical-align:middle; }
@@ -164,39 +177,80 @@ function profiles() {
   }).sort((a, b) => a.part.localeCompare(b.part));
 }
 
-// One bar to scale (0.5 px per mm, same scale both ways so angles are true), scrolls sideways on a tablet.
+// One bar. Tablet: true scale (0.5 px/mm, angles true), scrolls sideways. Desktop (fitW): whole bar fits the width,
+// heights fixed so pieces stay readable; horizontal positions and slant offsets stay true.
 // Top view: the face lying up, dashed = edge underneath. Side view: the face where the slant shows.
 const PX = 0.5;
-function barSvg(b, p) {
+function barSvg(b, p, fitW) {
   const sd = p.pieces.find(x => x.cut?.d)?.cut.d || Math.min(...p.dims) || 20;
   const td = p.dims.length ? (sd === Math.min(...p.dims) ? Math.max(...p.dims) : Math.min(...p.dims)) : sd;
-  const X = mm => (4 + mm * PX).toFixed(1), ht = Math.max(12, td * PX), hs = Math.max(12, sd * PX);
-  const y1 = 14, y2 = y1 + ht + 18, y3 = y2 + hs + 4, W = p.s.bar * PX + 8;
-  const waste = (a, z) => z - a > 0.5 ? `<rect class="waste" x="${X(a)}" y="${y1}" width="${((z - a) * PX).toFixed(1)}" height="${ht}"/><rect class="waste" x="${X(a)}" y="${y2}" width="${((z - a) * PX).toFixed(1)}" height="${hs}"/>` : '';
-  let s = `<svg width="${W}" height="${y3 + 16}" role="img" aria-label="Staafindeling"><defs><pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#f3f4f6"/><line x1="0" y1="0" x2="0" y2="6" stroke="#9ca3af"/></pattern></defs>
-    <text x="4" y="10" fill="#6b7280">bovenaanzicht (${fmt(td)} mm breed)</text><text x="4" y="${y2 - 4}" fill="#6b7280">zijaanzicht (${fmt(sd)} mm, hier zie je de hoeken)</text>`;
+  const sx = fitW ? (fitW - 8) / p.s.bar : PX;
+  const X = mm => (4 + mm * sx).toFixed(1), ht = fitW ? 44 : Math.max(12, td * PX), hs = fitW ? 28 : Math.max(12, sd * PX);
+  const y1 = 14, y2 = y1 + ht + 18, y3 = y2 + hs + 4, W = p.s.bar * sx + 8;
+  const waste = (a, z) => z - a > 0.5 ? `<rect class="waste" x="${X(a)}" y="${y1}" width="${((z - a) * sx).toFixed(1)}" height="${ht}"/><rect class="waste" x="${X(a)}" y="${y2}" width="${((z - a) * sx).toFixed(1)}" height="${hs}"/>` : '';
+  let s = `<svg width="${W.toFixed(0)}" height="${y3 + 16}" role="img" aria-label="Staafindeling"><defs><pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#f3f4f6"/><line x1="0" y1="0" x2="0" y2="6" stroke="#9ca3af"/></pattern></defs>
+    <text x="4" y="10" fill="#6b7280">boven · ${fmt(td)}</text><text x="4" y="${y2 - 4}" fill="#6b7280">zij · ${fmt(sd)}</text>`;
   s += waste(0, p.s.trim) + waste(b.end, p.s.bar);
   for (const q of b.pieces) {
     const L = (q.x + Math.min(q.ts, q.bs)), R = q.x + Math.max(q.te, q.be);
-    s += `<rect class="pc" x="${X(q.x + q.ts)}" y="${y1}" width="${((q.te - q.ts) * PX).toFixed(1)}" height="${ht}"/>`;
+    s += `<rect class="pc" x="${X(q.x + q.ts)}" y="${y1}" width="${((q.te - q.ts) * sx).toFixed(1)}" height="${ht}"><title>${fmt(q.len, 1)} mm · seq ${esc(q.seq)} · job ${esc(q.job)}</title></rect>`;
     for (const e of [q.bs, q.be]) if (Math.abs(e - q.ts) > 0.5 && Math.abs(e - q.te) > 0.5) s += `<line class="hid" x1="${X(q.x + e)}" y1="${y1}" x2="${X(q.x + e)}" y2="${y1 + ht}"/>`;
     s += `<polygon class="pc" points="${X(q.x + q.ts)},${y2} ${X(q.x + q.te)},${y2} ${X(q.x + q.be)},${y2 + hs} ${X(q.x + q.bs)},${y2 + hs}"/>`;
     const label = fmt(q.len) + (q.mitre ? '∠' : ''), mid = X((L + R) / 2);
-    if ((R - L) * PX > label.length * 6.5) s += `<text x="${mid}" y="${y1 + ht / 2 + 4}" text-anchor="middle">${label}</text>`;
-    if ((R - L) * PX > 40 && ht >= 30) s += `<text x="${mid}" y="${y1 + ht / 2 + 17}" text-anchor="middle" fill="#6b7280">seq ${esc(q.seq)}</text>`;
+    if ((R - L) * sx > label.length * 7.5 + 4) s += `<text x="${mid}" y="${y1 + ht / 2 + 4}" text-anchor="middle">${label}</text>`;
+    if ((R - L) * sx > 40 && ht >= 30) s += `<text x="${mid}" y="${y1 + ht / 2 + 17}" text-anchor="middle" fill="#6b7280">seq ${esc(q.seq)}</text>`;
   }
-  for (let m = 0; m <= p.s.bar; m += 1000) s += `<line x1="${X(m)}" y1="${y3}" x2="${X(m)}" y2="${y3 + 4}" stroke="#9ca3af"/><text x="${X(m)}" y="${y3 + 14}" text-anchor="${m ? 'middle' : 'start'}" fill="#6b7280">${m / 1000} m</text>`;
+  for (let m = 0; m <= p.s.bar; m += 1000) s += `<line x1="${X(m)}" y1="${y3}" x2="${X(m)}" y2="${y3 + 4}" stroke="#9ca3af"/><text x="${X(m)}" y="${y3 + 14}" text-anchor="${!m ? 'start' : m + 1000 > p.s.bar ? 'end' : 'middle'}" fill="#6b7280">${m / 1000} m</text>`;
   return s + '</svg>';
 }
 
-function planHtml(p) {
+function barGroups(p) {
   const groups = new Map(); // identical bars drawn once with a count
   for (const b of p.result.bars) {
     const k = b.pieces.map(q => [q.len, q.ts, q.te, q.bs, q.be].map(Math.round).join('/')).join(' ');
     if (groups.has(k)) groups.get(k).n++; else groups.set(k, { n: 1, b });
   }
-  return [...groups.values()].map(({ n, b }) => `<div><b>${n}×</b> ${esc(b.pieces.map(q => fmt(q.len) + (q.mitre ? '∠' : '')).join(' · '))} — rest ${fmt(b.rest)} mm
+  return [...groups.values()];
+}
+
+function planHtml(p) {
+  return barGroups(p).map(({ n, b }) => `<div><b>${n}×</b> ${esc(b.pieces.map(q => fmt(q.len) + (q.mitre ? '∠' : '')).join(' · '))} — rest ${fmt(b.rest)} mm
     <div class="draw">${barSvg(b, p)}</div></div>`).join('');
+}
+
+const waste = p => { const used = p.result.bars.reduce((a, b) => a + b.used, 0), avail = p.result.bars.length * (p.s.bar - p.s.trim); return avail ? fmt(100 - used / avail * 100) : 0; };
+const pills = p => `${p.result.tooLong.length ? `<span class="pill bad">${p.result.tooLong.length} stuk(s) langer dan staaf!</span>` : ''}
+  ${p.badCheck ? `<span class="pill bad">${p.badCheck} rode regel(s): mm × aantal klopt niet. Eerst corrigeren bij de job hieronder, dan pas bestellen</span>` : ''}
+  ${p.unsure ? `<span class="pill warn">${p.unsure} regel(s): stuks per product aangenomen</span>` : ''}
+  ${p.shapeUnsure ? `<span class="pill warn">${p.shapeUnsure} schuine regel(s): vorm of zijde aangenomen, controleer de tekening</span>` : ''}`;
+const count = p => p.badCheck ? '?' : `${p.result.bars.length} × ${fmt(p.s.bar)}`;
+
+// Desktop: profile list left, the selected profile's bars right, drawn to the panel width.
+const wide = matchMedia('(min-width: 1100px)');
+let sel = null;
+function deskHtml(ps) {
+  const p = ps.find(x => x.part === sel) || ps[0];
+  sel = p.part;
+  const list = ps.map(x => `<button class="pi ${x.badCheck ? 'isbad' : x.unsure || x.shapeUnsure ? 'iswarn' : ''} ${x === p ? 'sel' : ''}" data-sel="${esc(x.part)}">
+    <span><b>${esc(x.part)}</b><br><span class="mute">${esc(x.desc)}</span></span><span class="n">${count(x)}</span></button>`).join('');
+  return `<div class="desk"><nav class="plist">${list}</nav>
+    <section class="card det" data-part="${esc(p.part)}">
+      <div class="row"><div><span class="code">${esc(p.part)}</span> <span class="mute">${esc(p.desc)}</span></div>
+        <div class="big"${p.badCheck ? ' style="color:var(--bad)"' : ''}>${count(p)} mm</div></div>
+      <div class="mute">${fmt(p.totalMm / 1000, 2)} m nodig · ${p.pieces.length} stuks · afval ${waste(p)}%</div>
+      <div>${pills(p)}</div>
+      <div class="ctl">${p.mitre ? `<label><input type="checkbox" data-k="nest" ${p.s.nest ? 'checked' : ''}> Nesten</label>` : ''}
+        <label>Staaf <input type="number" data-k="bar" value="${p.s.bar}" min="1"></label>
+        <label>Zaagsnede <input type="number" data-k="kerf" value="${p.s.kerf}" min="0" step="0.5"></label>
+        <label>Eind <input type="number" data-k="trim" value="${p.s.trim}" min="0"></label></div>
+      <div class="bars" data-for="${esc(p.part)}"></div></section></div>`;
+}
+function drawDesk(ps) {
+  const box = $('.det .bars'); if (!box) return;
+  const p = ps.find(x => x.part === box.dataset.for), w = box.clientWidth - 110;
+  const tally = b => { const t = new Map(); for (const q of b.pieces) { const k = fmt(q.len, q.len % 1 ? 1 : 0) + (q.mitre ? '∠' : ''); t.set(k, (t.get(k) || 0) + 1); }
+    return [...t].map(([k, c]) => `${c}× ${k}`).join(' · '); };
+  box.innerHTML = barGroups(p).map(({ n, b }) => `<div class="br"><b>${n}×</b><div><div class="mute">${tally(b)}</div>${barSvg(b, p, w)}</div><span class="mute">rest<br>${fmt(b.rest)}</span></div>`).join('');
 }
 
 function render(msgs = []) {
@@ -204,16 +258,13 @@ function render(msgs = []) {
   if (!state.jobs.length) { $('#out').innerHTML = `<div class="card empty">Nog geen jobs.<br>Tik op <b>+ PDF's toevoegen</b> en kies één of meer Job Traveler PDF's.</div>`; return; }
   const ps = profiles();
   let h = `<h2>Bestellen (${ps.length} profielen, ${state.jobs.length} jobs)</h2>`;
-  for (const p of ps) {
-    const used = p.result.bars.reduce((a, b) => a + b.used, 0), avail = p.result.bars.length * (p.s.bar - p.s.trim);
+  if (wide.matches) h += deskHtml(ps);
+  else for (const p of ps) {
     h += `<div class="card" data-part="${esc(p.part)}">
       <div class="row"><div><div class="code">${esc(p.part)}</div><div class="mute">${esc(p.desc)}</div></div>
         <div style="text-align:right"><div class="big"${p.badCheck ? ' style="color:var(--bad)"' : ''}>${p.badCheck ? '?' : p.result.bars.length + ' st'}</div><div class="mute">à ${fmt(p.s.bar)} mm</div></div></div>
-      <div class="mute" style="margin-top:6px">${fmt(p.totalMm / 1000, 2)} m nodig · ${p.pieces.length} stuks · afval ${avail ? fmt(100 - used / avail * 100) : 0}%</div>
-      <div>${p.result.tooLong.length ? `<span class="pill bad">${p.result.tooLong.length} stuk(s) langer dan staaf!</span>` : ''}
-        ${p.badCheck ? `<span class="pill bad">${p.badCheck} rode regel(s): mm × aantal klopt niet. Eerst corrigeren bij de job hieronder, dan pas bestellen</span>` : ''}
-        ${p.unsure ? `<span class="pill warn">${p.unsure} regel(s): stuks per product aangenomen</span>` : ''}
-        ${p.shapeUnsure ? `<span class="pill warn">${p.shapeUnsure} schuine regel(s): vorm of zijde aangenomen, controleer de tekening</span>` : ''}</div>
+      <div class="mute" style="margin-top:6px">${fmt(p.totalMm / 1000, 2)} m nodig · ${p.pieces.length} stuks · afval ${waste(p)}%</div>
+      <div>${pills(p)}</div>
       ${p.mitre ? `<label class="nestbtn"><input type="checkbox" data-k="nest" ${p.s.nest ? 'checked' : ''}> Nesten: schuine stukken in elkaar zagen${p.s.nest ? ' (telt mee in bestelling)' : ''}</label>` : ''}
       <details${p.s.nest ? ' open' : ''}><summary>Zaagplan + tekening per staaf</summary><div class="plan">${planHtml(p)}</div></details>
       <details><summary>Instellingen dit profiel</summary>
@@ -235,7 +286,10 @@ function render(msgs = []) {
       </table></div>`;
   }
   $('#out').innerHTML = h;
+  if (wide.matches) drawDesk(ps);
 }
+wide.addEventListener('change', () => render());
+let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => wide.matches && state.jobs.length && drawDesk(profiles()), 150); });
 
 $('#out').addEventListener('change', e => {
   const t = e.target, card = t.closest('[data-part],[data-job]');
@@ -251,6 +305,8 @@ $('#out').addEventListener('change', e => {
   save(); render();
 });
 $('#out').addEventListener('click', e => {
+  const s = e.target.closest('[data-sel]');
+  if (s) { sel = s.dataset.sel; render(); return; }
   const d = e.target.dataset.del;
   if (d && confirm(`Job ${d} verwijderen?`)) { state.jobs = state.jobs.filter(j => j.job !== d); save(); render(); }
 });
