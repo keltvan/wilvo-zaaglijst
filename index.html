@@ -42,7 +42,9 @@
   .draw { overflow-x:auto; padding:4px 0 8px; }
   .draw svg { display:block; font:11px system-ui, sans-serif; }
   .draw .pc { fill:#dbeafe; stroke:var(--acc); stroke-width:1; }
-  .draw .hid { stroke:var(--acc); stroke-dasharray:3 3; }
+  .draw .hid, .det .hid { stroke:var(--acc); stroke-dasharray:4 3; }
+  .draw .tv, .det .tv { fill-opacity:.75; }
+  .draw .face, .det .face { fill:#1e3a8a; fill-opacity:.18; } .draw .edge, .det .edge { stroke:var(--acc); stroke-width:1; }
   .draw .waste { fill:url(#hatch); stroke:#9ca3af; }
   @media (min-width:1100px) {
     main { max-width:none; padding:12px 24px; }
@@ -227,15 +229,24 @@ function barSvg(b, p, v) {
   let s = `<svg width="${W.toFixed(0)}" height="${y3 + (lite ? 0 : 16)}" role="img" aria-label="Staafindeling"><defs><pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#f9fafb"/><line x1="0" y1="0" x2="0" y2="6" stroke="#d1d5db"/></pattern></defs>`;
   if (!lite) s += `<text x="4" y="10" fill="#6b7280">boven · ${fmt(td)}</text><text x="4" y="${y2 - 4}" fill="#6b7280">zij · ${fmt(sd)}</text>`;
   s += waste(0, p.s.trim) + waste(b.end, p.s.bar);
+  let over = ''; // edges and labels go on top of all pieces: nested pieces overlap in the top view
   for (const [i, q] of b.pieces.entries()) {
     const L = (q.x + Math.min(q.ts, q.bs)), R = q.x + Math.max(q.te, q.be), pc = lite && i % 2 ? 'pc pc2' : 'pc'; // alternate shade: each piece stands out
-    s += `<rect class="${pc}" x="${X(q.x + q.ts)}" y="${y1}" width="${((q.te - q.ts) * sx).toFixed(1)}" height="${ht}"><title>${fmt(q.len, 1)} mm · seq ${esc(q.seq)} · job ${esc(q.job)}</title></rect>`;
-    if (!lite) for (const e of [q.bs, q.be]) if (Math.abs(e - q.ts) > 0.5 && Math.abs(e - q.te) > 0.5) s += `<line class="hid" x1="${X(q.x + e)}" y1="${y1}" x2="${X(q.x + e)}" y2="${y1 + ht}"/>`;
+    // top view = outline tip to tip (see-through, so the nested overlap shows darker).
+    // A slant facing up shows its cut face (shaded strip, solid edge); facing down it is hidden under the piece (dashed).
+    s += `<rect class="${pc} tv" x="${X(L)}" y="${y1}" width="${((R - L) * sx).toFixed(1)}" height="${ht}"><title>${fmt(q.len, 1)} mm · seq ${esc(q.seq)} · job ${esc(q.job)}</title></rect>`;
+    for (const [top, bot] of [[q.ts, q.bs], [q.te, q.be]]) {
+      if (Math.abs(top - bot) < 0.5) continue;
+      const up = (top === q.ts) === (top > bot); // top edge set back from the tip: cut face looks up
+      if (up) over += `<rect class="face" x="${X(q.x + Math.min(top, bot))}" y="${y1}" width="${(Math.abs(top - bot) * sx).toFixed(1)}" height="${ht}"/>`;
+      over += `<line class="${up ? 'edge' : 'hid'}" x1="${X(q.x + (up ? top : bot))}" y1="${y1}" x2="${X(q.x + (up ? top : bot))}" y2="${y1 + ht}"/>`;
+    }
     if (side) s += `<polygon class="${pc}" points="${X(q.x + q.ts)},${y2} ${X(q.x + q.te)},${y2} ${X(q.x + q.be)},${y2 + hs} ${X(q.x + q.bs)},${y2 + hs}"/>`;
     const label = fmt(q.len) + (q.mitre && !lite ? '∠' : ''), mid = X((L + R) / 2);
-    if ((R - L) * sx > label.length * 7.5 + 4) s += `<text x="${mid}" y="${y1 + ht / 2 + 4}" text-anchor="middle">${label}</text>`;
-    if ((!lite || v.seq) && (R - L) * sx > 50 && ht >= 30) s += `<text x="${mid}" y="${y1 + ht / 2 + 17}" text-anchor="middle" fill="#6b7280">seq ${esc(q.seq)}</text>`;
+    if ((R - L) * sx > label.length * 7.5 + 4) over += `<text x="${mid}" y="${y1 + ht / 2 + 4}" text-anchor="middle">${label}</text>`;
+    if ((!lite || v.seq) && (R - L) * sx > 50 && ht >= 30) over += `<text x="${mid}" y="${y1 + ht / 2 + 17}" text-anchor="middle" fill="#6b7280">seq ${esc(q.seq)}</text>`;
   }
+  s += over;
   if (!lite) for (let m = 0; m <= p.s.bar; m += 1000) s += `<line x1="${X(m)}" y1="${y3}" x2="${X(m)}" y2="${y3 + 4}" stroke="#9ca3af"/><text x="${X(m)}" y="${y3 + 14}" text-anchor="${!m ? 'start' : m + 1000 > p.s.bar ? 'end' : 'middle'}" fill="#6b7280">${m / 1000} m</text>`;
   return s + '</svg>';
 }
