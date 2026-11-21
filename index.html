@@ -91,6 +91,25 @@
   .empty { text-align:center; color:var(--mute); padding:44px 16px; }
   .note { font-size:13px; color:var(--mute); margin:8px 2px; }
 
+  /* keuze bij Job toevoegen */
+  .sheet { position:fixed; inset:0; z-index:60; display:flex; flex-direction:column; justify-content:flex-end; gap:10px; padding:16px 16px calc(16px + env(safe-area-inset-bottom)); background:rgba(28,33,36,.56); }
+  .sheet > button { flex:0 0 auto; width:100%; max-width:520px; margin:0 auto; min-height:60px; font-size:1.05rem; }
+  .sheet > .x { background:#fff; color:var(--ink); border:1px solid var(--line); text-decoration:none; }
+  /* camera met kader */
+  .cam { position:fixed; inset:0; z-index:100; background:#000; color:#fff; overflow:hidden; touch-action:none; }
+  .cam video { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+  .cam-frame { position:absolute; border:2px solid rgba(255,255,255,.85); box-shadow:0 0 0 100vmax rgba(0,0,0,.55); pointer-events:none; }
+  .cam-frame i { position:absolute; width:34px; height:34px; border:5px solid var(--red); }
+  .cam-frame i:nth-child(1) { left:-5px; top:-5px; border-right:0; border-bottom:0; }
+  .cam-frame i:nth-child(2) { right:-5px; top:-5px; border-left:0; border-bottom:0; }
+  .cam-frame i:nth-child(3) { left:-5px; bottom:-5px; border-right:0; border-top:0; }
+  .cam-frame i:nth-child(4) { right:-5px; bottom:-5px; border-left:0; border-top:0; }
+  .cam-top { position:absolute; left:0; right:0; top:0; padding:calc(14px + env(safe-area-inset-top)) 16px 10px; text-align:center; font:600 1rem/1.3 var(--body); text-shadow:0 1px 3px #000; }
+  .cam-bar { position:absolute; left:0; right:0; bottom:0; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; padding:16px 20px calc(18px + env(safe-area-inset-bottom)); }
+  .cam-bar button { min-height:48px; background:rgba(0,0,0,.35); color:#fff; border:1px solid rgba(255,255,255,.5); }
+  .cam-cancel { justify-self:start; } .cam-torch { justify-self:end; } .cam-torch.on { background:#fff; color:#000; }
+  .cam-shot { width:78px; height:78px; padding:0; border-radius:50% !important; background:#fff !important; border:6px solid rgba(255,255,255,.45) !important; background-clip:padding-box !important; }
+  .cam-shot:active { transform:scale(.94); }
   /* telefoon/installeren */
   .phone { display:none; gap:20px; align-items:center; }
   .phone img { flex:none; border:1px solid var(--line); }
@@ -158,9 +177,9 @@
   <div class="top-row">
     <img class="logo" src="assets/wilvo-logo.svg" alt="WILVO" width="120" height="56">
     <div class="brand"><span class="eyebrow">Zagerij · inkoop</span>
-      <h1>Zaaglijst <a class="ver" href="https://github.com/keltvan/wilvo-zaaglijst/blob/main/CHANGELOG.md" target="_blank" rel="noopener" title="Wat is er veranderd">v1.5.4</a></h1></div>
+      <h1>Zaaglijst <a class="ver" href="https://github.com/keltvan/wilvo-zaaglijst/blob/main/CHANGELOG.md" target="_blank" rel="noopener" title="Wat is er veranderd">v1.6.0</a></h1></div>
     <div class="bar">
-      <label class="btn primary" for="file"><span class="plus">+</span> Job toevoegen <small>foto of PDF</small></label>
+      <button class="btn primary add" type="button"><span class="plus">+</span> Job toevoegen <small>foto of PDF</small></button>
       <button class="copy">Kopieer bestellijst</button>
       <button class="clear">Alles wissen</button>
     </div>
@@ -175,12 +194,18 @@
 </header>
 <main>
   <div class="bar">
-    <label class="btn primary" for="file"><span class="plus">+</span> Job toevoegen <small>foto of PDF</small></label>
+    <button class="btn primary add" type="button"><span class="plus">+</span> Job toevoegen <small>foto of PDF</small></button>
     <input id="file" type="file" accept="application/pdf,.pdf,image/*" multiple hidden>
+    <input id="snap" type="file" accept="image/*" capture="environment" hidden>
     <button class="copy">Kopieer bestellijst</button>
     <button class="clear">Alles wissen</button>
   </div>
   <div class="card install" id="install" hidden><span id="install-txt"></span><button id="install-btn" class="primary" style="flex:none" hidden>Installeren</button></div>
+  <div class="sheet" id="sheet" hidden role="dialog" aria-label="Job toevoegen">
+    <button class="primary" data-src="cam" type="button">📷 Camera met kader</button>
+    <button data-src="file" type="button">Bestand kiezen <small>PDF of foto</small></button>
+    <button data-src="x" class="x" type="button">Annuleren</button>
+  </div>
   <div id="msg"></div>
   <div id="out"></div>
 </main>
@@ -189,6 +214,7 @@
 import * as pdfjs from './vendor/pdf.min.mjs';
 import { pdfLines, parseJob, cutBars, partKey, cutShape } from './core.js';
 import { ocrLines } from './ocr.js';
+import { openCamera, cameraSupported } from './camera.js';
 pdfjs.GlobalWorkerOptions.workerSrc = './vendor/pdf.worker.min.mjs';
 
 const KEY = 'zaaglijst.v1';
@@ -201,9 +227,9 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fmt = (n, d = 0) => Number(n).toLocaleString('nl-NL', { minimumFractionDigits: d, maximumFractionDigits: d });
 
-async function addFiles(e) {
-  const msgs = [], files = [...e.target.files];
-  e.target.value = '';
+const addFiles = e => { const files = [...e.target.files]; e.target.value = ''; handleFiles(files); };
+async function handleFiles(files) {
+  const msgs = [];
   for (const [i, f] of files.entries()) {
     try {
       const isPdf = /pdf/i.test(f.type) || /.pdf$/i.test(f.name);
@@ -231,6 +257,20 @@ async function addFiles(e) {
   save(); render(msgs);
 }
 $('#file').addEventListener('change', addFiles);
+$('#snap').addEventListener('change', addFiles);
+// "Job toevoegen": phone/tablet with a camera -> choose camera (with frame) or a file; desktop -> file picker
+const touch = matchMedia('(pointer: coarse)');
+for (const b of document.querySelectorAll('.add')) b.onclick = () => touch.matches && cameraSupported() ? ($('#sheet').hidden = false) : $('#file').click();
+$('#sheet').onclick = async e => {
+  const src = e.target.closest('[data-src]')?.dataset.src;
+  if (!src && e.target !== $('#sheet')) return;
+  $('#sheet').hidden = true;
+  if (src === 'file') $('#file').click();
+  if (src === 'cam') {
+    try { const f = await openCamera(); if (f) handleFiles([f]); }
+    catch { $('#snap').click(); } // no camera access in the page: the device's own camera
+  }
+};
 // buttons exist twice: in the header (desktop) and below it (tablet/phone)
 for (const b of document.querySelectorAll('.clear')) b.onclick = () => { if (confirm('Alle jobs wissen? Instellingen per profiel blijven bewaard.')) { state.jobs = []; sel = null; save(); render(); } };
 for (const b of document.querySelectorAll('.copy')) b.onclick = async () => {

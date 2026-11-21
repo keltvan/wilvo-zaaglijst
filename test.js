@@ -96,6 +96,20 @@ assert.equal(cutBars([p(6500)], { bar: 6000 }).tooLong.length, 1);
   assert.equal(cutShape('Koker 60x 40x3 (1x) 45° verstek').a[1], 0);
 }
 
+// camera frame: A4, turned with the screen; screen frame -> video pixels with object-fit: cover
+{
+  const { frameRect, cropRect } = await import('./camera.js');
+  const p = frameRect(820, 1180), l = frameRect(1180, 820);
+  assert.ok(p.portrait && Math.abs(p.w / p.h - 210 / 297) < 1e-9 && p.w <= 820 * 0.92 + 1e-9);
+  assert.ok(!l.portrait && Math.abs(l.w / l.h - 297 / 210) < 1e-9);
+  // 2000x1000 video shown in 1000x500: scale 0.5, no offset
+  assert.deepEqual(cropRect({ left: 100, top: 50, width: 200, height: 100 }, { left: 0, top: 0, width: 1000, height: 500 }, 2000, 1000, 0), { x: 200, y: 100, w: 400, h: 200 });
+  // 4:3 video in a tall screen: cut off left and right, frame mapped through the offset; margin clamped to the video
+  const r = cropRect({ left: 0, top: 0, width: 400, height: 800 }, { left: 0, top: 0, width: 400, height: 800 }, 1200, 900, 0.04);
+  assert.deepEqual([r.y, r.h], [0, 900]);
+  assert.ok(r.x > 0 && r.x + r.w <= 1200);
+}
+
 // real PDFs, expected values per job number
 // Expected values per job live in test-expect.local.json (customer data, not committed).
 const expect = process.argv.length > 2 ? JSON.parse(fs.readFileSync(new URL('./test-expect.local.json', import.meta.url))) : {};

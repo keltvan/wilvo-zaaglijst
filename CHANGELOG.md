@@ -3,6 +3,11 @@
 Versienummer staat rechtsboven in de app. Nieuwe functie = tweede cijfer omhoog, reparatie = derde cijfer.
 Elke versie heeft een git-tag (`v1.3.0` enz.), zodat je altijd terug kunt naar een vorige versie.
 
+## 1.6.0 — 2026-11-21
+- Camera met kader: op telefoon/tablet vraagt "Job toevoegen" camera of bestand. De camera toont een vast A4-kader (draait mee met het scherm) met rode hoeken; leg de job erin en druk op de knop. De foto wordt bijgesneden tot het kader, zodat de herkenning alleen het papier krijgt.
+- Op Android (Chrome) maakt de camera een echte foto op volle resolutie; op iPad/iPhone een beeld uit de video. Lampknop waar het apparaat dat ondersteunt.
+- Geen camera-toegang: de gewone camera van het apparaat opent, zoals voorheen.
+
 ## 1.5.4 — 2026-11-21
 - Geen witte plaat meer achter het icoon op Android: transparante "maskable" variant toegevoegd (zonder die variant zet Android/Chrome het icoon op een witte cirkel).
 
