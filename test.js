@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
-import { pdfLines, parseJob, guessPieces, cutBars, partKey } from './core.js';
+import { pdfLines, parseJob, guessPieces, cutBars, partKey, cutShape } from './core.js';
 
 // guessPieces
 assert.deepEqual(guessPieces(2696, [1348, 500]), { perProduct: 2, source: 'tekst' });
@@ -16,10 +16,29 @@ assert.equal(cutBars(Array(7).fill(p(1900)), { bar: 6000 }).bars.length, 3);
 // kerf: 3 x 2000 fits without kerf, not with it
 assert.equal(cutBars(Array(3).fill(p(2000)), { bar: 6000 }).bars.length, 1);
 assert.equal(cutBars(Array(3).fill(p(2000)), { bar: 6000, kerf: 3 }).bars.length, 2);
-// nesting: 3 x 2020 mitred fits with 40 mm offset (2020 + 2*1983 = 5986), not without
-assert.equal(cutBars(Array(3).fill(p(2020, true)), { bar: 6000, kerf: 3 }).bars.length, 2);
-assert.equal(cutBars(Array(3).fill(p(2020, true)), { bar: 6000, kerf: 3, nestOffset: 40 }).bars.length, 1);
 assert.equal(cutBars([p(6500)], { bar: 6000 }).tooLong.length, 1);
+
+// shapes, checked against the CAD models
+{
+  const ruit = cutShape('S355 Koker 100x 50x4 mm L=12 2x 25° ruitvorm tov brede zijde');
+  assert.deepEqual(ruit, { a: [25, 25], shape: 'ruit', d: 50, sure: true });
+  assert.deepEqual(cutShape('Koker 100x 50x4 mm 1x 22.5° & 1x 45° trapezevorm tov brede zijde').a, [22.5, 45]);
+  assert.deepEqual(cutShape('S355 Koker 100x 50x4 mm 2x 25° aan een zijde volgens tekening'), { a: [25, 0], shape: 'trapeze', d: 50, sure: false });
+  assert.deepEqual(cutShape('RVS304 koker 40x 40x 2.0 onder 45° verstek zagen'), { a: [45, 45], shape: 'trapeze', d: 40, sure: false });
+  assert.equal(cutShape('Koker 100x 50x4 mm 2x 25° ruitvorm tov smalle zijde').d, 100);
+
+  // ruit 937 tip to tip: each next piece costs 913.6 (CAD long edge) + 3/cos25 kerf
+  const r5 = Array(5).fill({ len: 937, cut: ruit });
+  assert.equal(cutBars(r5, { bar: 4650, kerf: 3 }).bars.length, 2); // 5*937 + 4*3 = 4697
+  const n = cutBars(r5, { bar: 4650, kerf: 3, nest: true });
+  assert.equal(n.bars.length, 1);
+  assert.ok(Math.abs(n.bars[0].end - (937 + 4 * (937 - 50 * Math.tan(25 * Math.PI / 180) + 3 / Math.cos(25 * Math.PI / 180)))) < 0.01);
+  // trapezia nest when turned over alternately; one-end pieces pair up slant to slant
+  const tz = cutBars(Array(2).fill({ len: 1000, cut: { a: [45, 45], shape: 'trapeze', d: 40 } }), { bar: 6000, nest: true });
+  assert.equal(Math.round(tz.bars[0].end), 1960);
+  const one = cutBars(Array(2).fill({ len: 304, cut: cutShape('Koker 100x 50x4 mm 2x 25° aan een zijde') }), { bar: 6000, nest: true });
+  assert.equal(one.bars[0].end.toFixed(1), (608 - 23.3).toFixed(1));
+}
 
 // OCR-style lines: junk before the seq, dropped decimal points, O for 0
 {

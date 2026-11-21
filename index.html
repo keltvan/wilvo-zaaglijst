@@ -39,6 +39,12 @@
   input[type=checkbox] { width:28px; height:28px; }
   .plan div { padding:8px 0; border-bottom:1px solid var(--line); font-variant-numeric:tabular-nums; }
   .plan div:last-child { border:0; }
+  .draw { overflow-x:auto; padding:4px 0 8px; }
+  .draw svg { display:block; font:11px system-ui, sans-serif; }
+  .draw .pc { fill:#dbeafe; stroke:var(--acc); stroke-width:1; }
+  .draw .hid { stroke:var(--acc); stroke-dasharray:3 3; }
+  .draw .waste { fill:url(#hatch); stroke:#9ca3af; }
+  .nestbtn { display:inline-flex; gap:8px; align-items:center; padding:4px 0; font-weight:600; }
   table { width:100%; border-collapse:collapse; font-size:14px; font-variant-numeric:tabular-nums; }
   th, td { text-align:left; padding:8px 6px; border-bottom:1px solid var(--line); vertical-align:middle; }
   th { color:var(--mute); font-weight:600; }
@@ -85,13 +91,15 @@
 <script src="./vendor/tesseract/tesseract.min.js"></script>
 <script type="module">
 import * as pdfjs from './vendor/pdf.min.mjs';
-import { pdfLines, parseJob, cutBars, partKey } from './core.js';
+import { pdfLines, parseJob, cutBars, partKey, cutShape } from './core.js';
 import { ocrLines } from './ocr.js';
 pdfjs.GlobalWorkerOptions.workerSrc = './vendor/pdf.worker.min.mjs';
 
 const KEY = 'zaaglijst.v1';
 const DEFAULTS = { bar: 6000, kerf: 3, trim: 0 };
 const state = Object.assign({ jobs: [], parts: {} }, JSON.parse(localStorage.getItem(KEY) || '{}'));
+// jobs saved before cut shapes existed: derive them from the stored description
+for (const j of state.jobs) for (const r of j.rows) if (!('cut' in r)) { r.mitre = /verstek|\d\s*°/i.test(r.desc); r.cut = r.mitre ? cutShape(r.desc) : null; }
 const save = () => localStorage.setItem(KEY, JSON.stringify(state));
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -136,8 +144,7 @@ $('#copy').onclick = async () => {
 
 function settings(part, rows) {
   const hint = rows.find(r => r.barHint)?.barHint;
-  const h = rows.find(r => r.height)?.height || 0;
-  return Object.assign({ ...DEFAULTS, bar: hint || DEFAULTS.bar, nest: false, offset: h }, state.parts[part]);
+  return Object.assign({ ...DEFAULTS, bar: hint || DEFAULTS.bar, nest: false }, state.parts[part]);
 }
 
 function profiles() {
@@ -146,21 +153,50 @@ function profiles() {
   return Object.values(by).map(rows => {
     const part = rows[0].part;
     const s = settings(part, rows);
-    const pieces = rows.flatMap(r => Array(Math.round(r.qty * r.perProduct)).fill({ len: r.mmPer / r.perProduct, mitre: r.mitre, job: r.job }));
-    const result = cutBars(pieces, { bar: s.bar, kerf: s.kerf, trim: s.trim, nestOffset: s.nest ? s.offset : 0 });
-    const desc = rows[0].desc.replace(/\s*onder.*verstek.*$/i, '').slice(0, 60);
-    return { part, desc, rows, s, pieces, result, totalMm: rows.reduce((a, r) => a + r.qty * r.mmPer, 0),
-      unsure: rows.filter(r => r.source !== 'tekst').length, badCheck: rows.filter(r => !r.check).length, mitre: rows.some(r => r.mitre) };
+    const pieces = rows.flatMap(r => Array(Math.round(r.qty * r.perProduct)).fill({ len: r.mmPer / r.perProduct, mitre: r.mitre, cut: r.cut, seq: r.seq, job: r.job }));
+    const result = cutBars(pieces, { bar: s.bar, kerf: s.kerf, trim: s.trim, nest: s.nest });
+    const desc = rows[0].desc.replace(/\s*(onder\s+|\d\s*x\s*)?\d+(?:[.,]\d+)?\s*°.*$/i, '').slice(0, 60);
+    const dims = (desc.match(/(\d+(?:[.,]\d+)?)\s*x\s*(\d+(?:[.,]\d+)?)/i) || []).slice(1).map(v => parseFloat(v.replace(',', '.')));
+    const m = rows.filter(r => r.mitre);
+    return { part, desc, rows, s, pieces, result, dims, totalMm: rows.reduce((a, r) => a + r.qty * r.mmPer, 0),
+      unsure: rows.filter(r => r.source !== 'tekst').length, badCheck: rows.filter(r => !r.check).length, mitre: m.length > 0,
+      shapeUnsure: m.filter(r => !r.cut?.sure).length };
   }).sort((a, b) => a.part.localeCompare(b.part));
 }
 
-function planHtml(p) {
-  const groups = {};
-  for (const b of p.result.bars) {
-    const k = b.pieces.map(x => fmt(x.len) + (x.mitre ? '∠' : '')).join(' · ') + ` — rest ${fmt(b.rest)} mm`;
-    groups[k] = (groups[k] || 0) + 1;
+// One bar to scale (0.5 px per mm, same scale both ways so angles are true), scrolls sideways on a tablet.
+// Top view: the face lying up, dashed = edge underneath. Side view: the face where the slant shows.
+const PX = 0.5;
+function barSvg(b, p) {
+  const sd = p.pieces.find(x => x.cut?.d)?.cut.d || Math.min(...p.dims) || 20;
+  const td = p.dims.length ? (sd === Math.min(...p.dims) ? Math.max(...p.dims) : Math.min(...p.dims)) : sd;
+  const X = mm => (4 + mm * PX).toFixed(1), ht = Math.max(12, td * PX), hs = Math.max(12, sd * PX);
+  const y1 = 14, y2 = y1 + ht + 18, y3 = y2 + hs + 4, W = p.s.bar * PX + 8;
+  const waste = (a, z) => z - a > 0.5 ? `<rect class="waste" x="${X(a)}" y="${y1}" width="${((z - a) * PX).toFixed(1)}" height="${ht}"/><rect class="waste" x="${X(a)}" y="${y2}" width="${((z - a) * PX).toFixed(1)}" height="${hs}"/>` : '';
+  let s = `<svg width="${W}" height="${y3 + 16}" role="img" aria-label="Staafindeling"><defs><pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#f3f4f6"/><line x1="0" y1="0" x2="0" y2="6" stroke="#9ca3af"/></pattern></defs>
+    <text x="4" y="10" fill="#6b7280">bovenaanzicht (${fmt(td)} mm breed)</text><text x="4" y="${y2 - 4}" fill="#6b7280">zijaanzicht (${fmt(sd)} mm, hier zie je de hoeken)</text>`;
+  s += waste(0, p.s.trim) + waste(b.end, p.s.bar);
+  for (const q of b.pieces) {
+    const L = (q.x + Math.min(q.ts, q.bs)), R = q.x + Math.max(q.te, q.be);
+    s += `<rect class="pc" x="${X(q.x + q.ts)}" y="${y1}" width="${((q.te - q.ts) * PX).toFixed(1)}" height="${ht}"/>`;
+    for (const e of [q.bs, q.be]) if (Math.abs(e - q.ts) > 0.5 && Math.abs(e - q.te) > 0.5) s += `<line class="hid" x1="${X(q.x + e)}" y1="${y1}" x2="${X(q.x + e)}" y2="${y1 + ht}"/>`;
+    s += `<polygon class="pc" points="${X(q.x + q.ts)},${y2} ${X(q.x + q.te)},${y2} ${X(q.x + q.be)},${y2 + hs} ${X(q.x + q.bs)},${y2 + hs}"/>`;
+    const label = fmt(q.len) + (q.mitre ? '∠' : ''), mid = X((L + R) / 2);
+    if ((R - L) * PX > label.length * 6.5) s += `<text x="${mid}" y="${y1 + ht / 2 + 4}" text-anchor="middle">${label}</text>`;
+    if ((R - L) * PX > 40 && ht >= 30) s += `<text x="${mid}" y="${y1 + ht / 2 + 17}" text-anchor="middle" fill="#6b7280">seq ${esc(q.seq)}</text>`;
   }
-  return Object.entries(groups).map(([k, n]) => `<div><b>${n}×</b> ${esc(k)}</div>`).join('');
+  for (let m = 0; m <= p.s.bar; m += 1000) s += `<line x1="${X(m)}" y1="${y3}" x2="${X(m)}" y2="${y3 + 4}" stroke="#9ca3af"/><text x="${X(m)}" y="${y3 + 14}" text-anchor="${m ? 'middle' : 'start'}" fill="#6b7280">${m / 1000} m</text>`;
+  return s + '</svg>';
+}
+
+function planHtml(p) {
+  const groups = new Map(); // identical bars drawn once with a count
+  for (const b of p.result.bars) {
+    const k = b.pieces.map(q => [q.len, q.ts, q.te, q.bs, q.be].map(Math.round).join('/')).join(' ');
+    if (groups.has(k)) groups.get(k).n++; else groups.set(k, { n: 1, b });
+  }
+  return [...groups.values()].map(({ n, b }) => `<div><b>${n}×</b> ${esc(b.pieces.map(q => fmt(q.len) + (q.mitre ? '∠' : '')).join(' · '))} — rest ${fmt(b.rest)} mm
+    <div class="draw">${barSvg(b, p)}</div></div>`).join('');
 }
 
 function render(msgs = []) {
@@ -177,14 +213,13 @@ function render(msgs = []) {
       <div>${p.result.tooLong.length ? `<span class="pill bad">${p.result.tooLong.length} stuk(s) langer dan staaf!</span>` : ''}
         ${p.badCheck ? `<span class="pill bad">${p.badCheck} rode regel(s): mm × aantal klopt niet. Eerst corrigeren bij de job hieronder, dan pas bestellen</span>` : ''}
         ${p.unsure ? `<span class="pill warn">${p.unsure} regel(s): stuks per product aangenomen</span>` : ''}
-        ${p.mitre ? `<span class="pill ${p.s.nest ? 'okp' : 'warn'}">verstek${p.s.nest ? ` · in elkaar (−${fmt(p.s.offset)} mm)` : ' · niet in elkaar gerekend'}</span>` : ''}</div>
-      <details><summary>Zaagplan</summary><div class="plan">${planHtml(p)}</div></details>
+        ${p.shapeUnsure ? `<span class="pill warn">${p.shapeUnsure} schuine regel(s): vorm of zijde aangenomen, controleer de tekening</span>` : ''}</div>
+      ${p.mitre ? `<label class="nestbtn"><input type="checkbox" data-k="nest" ${p.s.nest ? 'checked' : ''}> Nesten: schuine stukken in elkaar zagen${p.s.nest ? ' (telt mee in bestelling)' : ''}</label>` : ''}
+      <details${p.s.nest ? ' open' : ''}><summary>Zaagplan + tekening per staaf</summary><div class="plan">${planHtml(p)}</div></details>
       <details><summary>Instellingen dit profiel</summary>
         <label>Staaflengte (mm) <input type="number" data-k="bar" value="${p.s.bar}" min="1"></label>
         <label>Zaagsnede (mm) <input type="number" data-k="kerf" value="${p.s.kerf}" min="0" step="0.5"></label>
         <label>Onbruikbaar eind (mm) <input type="number" data-k="trim" value="${p.s.trim}" min="0"></label>
-        ${p.mitre ? `<label>Verstekstukken om-en-om zagen <input type="checkbox" data-k="nest" ${p.s.nest ? 'checked' : ''}></label>
-        <label>Winst per stuk (profielhoogte, mm) <input type="number" data-k="offset" value="${p.s.offset}" min="0"></label>` : ''}
       </details></div>`;
   }
   h += `<p class="note">∠ = verstek. Oranje = controleren: het aantal stuks per product staat niet eenduidig op de job. Rood = getal verkeerd gelezen, eerst corrigeren. Pas het aan bij de job hieronder.</p>`;
