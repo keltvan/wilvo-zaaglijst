@@ -3,6 +3,10 @@
 Versienummer staat rechtsboven in de app. Nieuwe functie = tweede cijfer omhoog, reparatie = derde cijfer.
 Elke versie heeft een git-tag (`v1.3.0` enz.), zodat je altijd terug kunt naar een vorige versie.
 
+## 1.5.3 — 2026-11-21
+- App-icoon is de WILVO-leeuw (lijntekening, donkerblauw, zonder achtergrond, met smalle witte rand zodat hij ook op een donker beginscherm zichtbaar blijft). iPhone/iPad krijgt een witte achtergrond (geen transparantie mogelijk).
+- Nieuwe bestandsnamen voor de iconen, zodat Chrome niet het oude icoon uit de cache gebruikt.
+
 ## 1.5.2 — 2026-11-21
 - App-iconen in WILVO-stijl: de logoplaat (rode kap, donkerblauw vlak) met drie gezaagde stukken die om-en-om in elkaar liggen.
 
