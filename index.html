@@ -75,7 +75,6 @@
   .ver { font-size:13px; font-weight:400; color:#fff; opacity:.7; text-decoration:none; margin-left:6px; vertical-align:middle; } .ver:hover { opacity:1; text-decoration:underline; }
   .primary small { font-weight:400; opacity:.8; margin-left:6px; }
   .det.pick { display:flex; align-items:center; justify-content:center; min-height:300px; color:var(--mute); font-size:18px; }
-  .sw.off { opacity:.45; cursor:not-allowed; }
   .calc { display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; padding:12px 14px; margin:10px 0 4px; background:#f8fafc; border:1px solid var(--line); border-radius:12px; font-variant-numeric:tabular-nums; }
   .calc span { display:flex; flex-direction:column; font-weight:700; font-size:17px; line-height:1.2; }
   .calc small { font-weight:400; font-size:12px; color:var(--mute); }
@@ -120,7 +119,7 @@
 </head>
 <body>
 <header>
-  <h1>Zaaglijst · inkoop <a class="ver" href="https://github.com/keltvan/wilvo-zaaglijst/blob/main/CHANGELOG.md" target="_blank" rel="noopener" title="Wat is er veranderd">v1.3.0</a></h1>
+  <h1>Zaaglijst · inkoop <a class="ver" href="https://github.com/keltvan/wilvo-zaaglijst/blob/main/CHANGELOG.md" target="_blank" rel="noopener" title="Wat is er veranderd">v1.3.1</a></h1>
   <p>Foto of PDF van de job in → aantal staven per profiel uit</p>
 </header>
 <main>
@@ -295,7 +294,7 @@ function calcHtml(p) {
   return `<div class="calc">${t(`${p.pieces.length} stukken`, fmt(len))}<i>+</i>${t(`${cuts} zaagsneden × ${fmt(p.s.kerf, p.s.kerf % 1 ? 1 : 0)}`, fmt(cuts * p.s.kerf))}
     ${p.s.nest && gain > 0.5 ? `<i>−</i>${t('nesten', fmt(gain), 'gain')}` : ''}<i>=</i>${t('nodig (mm)', fmt(used))}
     <i>÷</i>${t(p.s.trim ? 'staaf − eind' : 'staaf', fmt(usable))}<i>=</i>${t('minimaal', fmt(min, 2))}<i>→</i>${t('indeling', `${bars.length} staven`, 'res')}
-    ${p.s.nest ? `<em>zonder nesten: ${p.plain.bars.length} staven</em>` : ''}
+    ${p.s.nest && p.mitre ? `<em>zonder nesten: ${p.plain.bars.length} staven</em>` : ''}
     ${extra > 0 ? `<em>${extra} staaf extra: de restlengtes zijn te kort voor de overige stukken</em>` : ''}</div>`;
 }
 
@@ -317,15 +316,15 @@ function deskHtml(ps) {
       <div class="row"><div><div class="code">${esc(p.part)}</div><div class="mute">${esc(p.desc)}</div></div>
         <div class="big"${p.badCheck ? ' style="color:var(--bad)"' : ''}>${count(p)}<small> mm</small></div></div>
       <div class="ctl">
-        <label class="sw${p.mitre ? '' : ' off'}" title="${p.mitre ? 'Schuine stukken in elkaar zagen: één zaagsnede per naad' : 'Alleen rechte stukken: die liggen al kop aan kop, nesten levert niets op'}"><input type="checkbox" data-k="nest" ${p.s.nest && p.mitre ? 'checked' : ''} ${p.mitre ? '' : 'disabled'}><span></span>Nesten</label>
+        <label class="sw" title="${p.mitre ? 'Toon de indeling per staaf; schuine stukken worden in elkaar gezaagd (één zaagsnede per naad)' : 'Toon de indeling per staaf (rechte stukken liggen kop aan kop)'}"><input type="checkbox" data-k="nest" ${p.s.nest ? 'checked' : ''}><span></span>Nesten</label>
         <span class="mute">afval ${waste(p)}%</span>${flags}
         <span class="set"><label>staaf <input type="number" data-k="bar" value="${p.s.bar}" min="1"></label>
         <label>zaagsnede <input type="number" data-k="kerf" value="${p.s.kerf}" min="0" step="0.5"></label>
         <label>eind <input type="number" data-k="trim" value="${p.s.trim}" min="0"></label></span></div>
       ${calcHtml(p)}
-      <div class="zoom"><button data-z="-" aria-label="Uitzoomen">−</button><span id="zl">100%</span><button data-z="+" aria-label="Inzoomen">+</button><button data-z="0">Passend</button>
+      ${p.s.nest ? `<div class="zoom"><button data-z="-" aria-label="Uitzoomen">−</button><span id="zl">100%</span><button data-z="+" aria-label="Inzoomen">+</button><button data-z="0">Passend</button>
         <span class="mute">Ctrl + scrollen = zoomen · slepen = schuiven</span></div>
-      <div class="bars" data-for="${esc(p.part)}"></div></section></div>`;
+      <div class="bars" data-for="${esc(p.part)}"></div>` : ''}</section></div>`;
 }
 // zoom 1 = whole bar fits; higher = wider, and view heights grow until they are true scale (true angles)
 let zoom = 1;

@@ -3,6 +3,10 @@
 Versienummer staat rechtsboven in de app. Nieuwe functie = tweede cijfer omhoog, reparatie = derde cijfer.
 Elke versie heeft een git-tag (`v1.3.0` enz.), zodat je altijd terug kunt naar een vorige versie.
 
+## 1.3.1 — 2026-11-21
+- Indeling (tekening per staaf) verschijnt pas als je "Nesten" aanzet; de berekening staat er altijd.
+- "Nesten" werkt nu ook bij profielen met alleen rechte stukken (toont de indeling kop aan kop).
+
 ## 1.3.0 — 2026-11-21
 - Desktop: lijst met profielen links, berekening en indeling rechts (pas na klikken op een profiel).
 - Berekening per profiel: stukken + zaagsneden − nesten = nodig, ÷ staaf = minimaal, → indeling.
