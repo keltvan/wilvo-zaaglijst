@@ -54,7 +54,7 @@
     .phone img { width:40px; height:40px; border:0; transition:width .15s, height .15s; } .phone:hover img { width:200px; height:200px; }
     .phone ol, .phone .mute { display:none; }
   }
-  .desk { display:grid; grid-template-columns:280px 1fr; gap:16px; align-items:start; }
+  .desk { display:grid; grid-template-columns:280px minmax(0,1fr); gap:16px; align-items:start; }
   .plist { display:flex; flex-direction:column; gap:2px; position:sticky; top:12px; max-height:calc(100vh - 24px); overflow:auto; background:#fff; border-radius:14px; padding:6px; }
   .pi { display:grid; grid-template-columns:10px 1fr auto; align-items:center; gap:10px; text-align:left; padding:10px; min-height:0; font-weight:400; box-shadow:none; border-radius:10px; background:none; }
   .pi:hover { background:#f3f4f6; } .pi.sel { background:#dbeafe; }
@@ -70,7 +70,7 @@
   .sw input { position:absolute; opacity:0; } .sw span { width:40px; height:22px; border-radius:11px; background:#d1d5db; position:relative; transition:.15s; }
   .sw span::after { content:''; position:absolute; left:3px; top:3px; width:16px; height:16px; border-radius:50%; background:#fff; transition:.15s; }
   .sw input:checked + span { background:var(--acc); } .sw input:checked + span::after { left:21px; } .sw input:focus-visible + span { outline:2px solid var(--acc); outline-offset:2px; }
-  .det .br { display:grid; grid-template-columns:44px 1fr 80px; align-items:center; gap:10px; padding:12px 0; border-top:1px solid var(--line); }
+  .det .br { display:grid; grid-template-columns:44px minmax(0,1fr) 80px; align-items:center; gap:10px; padding:12px 0; border-top:1px solid var(--line); }
   .det .br > b { font-size:20px; color:var(--acc); } .det .br svg { display:block; font:12px system-ui, sans-serif; }
   .det .tl { font-size:13px; color:var(--mute); margin-bottom:4px; white-space:pre; }
   .det .rest { font-size:12px; color:var(--mute); text-align:right; } .det .rest b { display:block; font-size:15px; color:var(--ink); }
@@ -275,6 +275,7 @@ function deskHtml(ps) {
 function drawDesk(ps) {
   const box = $('.det .bars'); if (!box) return;
   const p = ps.find(x => x.part === box.dataset.for), w = box.clientWidth - 150;
+  drawnW = box.clientWidth;
   const tally = b => { const t = new Map(); for (const q of b.pieces) { const k = fmt(q.len, q.len % 1 ? 1 : 0); t.set(k, (t.get(k) || 0) + 1); }
     return [...t].map(([k, c]) => `${c}× ${k}`).join('  ·  '); };
   box.innerHTML = barGroups(p).map(({ n, b }) => `<div class="br"><b>${n}×</b><div><div class="tl">${tally(b)}</div>${barSvg(b, p, w)}</div><span class="rest">rest<b>${fmt(b.rest)}</b></span></div>`).join('');
@@ -313,10 +314,13 @@ function render(msgs = []) {
       </table></div>`;
   }
   $('#out').innerHTML = h;
-  if (wide.matches) drawDesk(ps);
+  ro.disconnect();
+  if (wide.matches) { drawDesk(ps); ro.observe($('.det .bars')); }
 }
 wide.addEventListener('change', () => render());
-let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => wide.matches && state.jobs.length && drawDesk(profiles()), 150); });
+// redraw when the bars panel changes width (window resize, zoom, scrollbar appearing)
+let drawnW = 0;
+const ro = new ResizeObserver(([e]) => { if (Math.abs(e.contentRect.width - drawnW) > 1) drawDesk(profiles()); });
 
 $('#out').addEventListener('change', e => {
   const t = e.target, card = t.closest('[data-part],[data-job]');
