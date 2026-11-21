@@ -10,135 +10,175 @@
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#0b4ea2">
+<meta name="theme-color" content="#ffffff">
 <style>
-  :root { --bg:#f3f4f6; --card:#fff; --ink:#111827; --mute:#6b7280; --line:#e5e7eb; --acc:#0b4ea2; --ok:#15803d; --warn:#b45309; --warnbg:#fef3c7; --bad:#b91c1c; --badbg:#fee2e2; }
+/* WILVO-huisstijl zoals de Engineering Hub: rood accent, lichtblauw als structuur, Bitter voor koppen,
+   Roboto voor tekst, rechte hoeken. Lettertypen: SIL Open Font License 1.1 (via Fontsource). */
+  @font-face { font-family:"Bitter"; font-weight:100 900; font-display:swap; src:url(assets/fonts/bitter.woff2) format("woff2"); }
+  @font-face { font-family:"Roboto"; font-weight:100 900; font-display:swap; src:url(assets/fonts/roboto.woff2) format("woff2"); }
+  :root {
+    --red:#e0262e; --red-ink:#c41f27; --blue:#a7c2ce; --blue-dark:#6f96a6; --blue-ink:#456675; --blue-soft:#e6eef1; --blue-line:#cad8de;
+    --ink:#252b2e; --copy:#596267; --mute:#737d82; --line:#d9dddf; --line-soft:#e7eaeb; --mist:#eef2f3; --warm:#f5f3f1; --card:#fff;
+    --ok:#1f6a4e; --oksoft:#e3f1ea; --warn:#8a551e; --warnbg:#fff7ed; --warnline:#ead4bb; --bad:#b42318; --badbg:#fee4e2;
+    --acc:var(--blue-ink);
+    --display:"Bitter", Rockwell, Georgia, serif; --body:"Roboto", "Segoe UI", Aptos, Arial, sans-serif;
+    --shadow:0 1px 2px rgba(37,43,46,.05), 0 .375rem 1.125rem rgba(37,43,46,.05);
+  }
   * { box-sizing:border-box; }
-  body { margin:0; font:16px/1.4 -apple-system, system-ui, "Segoe UI", Roboto, sans-serif; background:var(--bg); color:var(--ink); padding:env(safe-area-inset-top) 0 40px; }
-  header { background:var(--acc); color:#fff; padding:16px 20px; }
-  header h1 { margin:0; font-size:22px; }
-  header p { margin:2px 0 0; opacity:.85; font-size:14px; }
+  body { margin:0; font:400 16px/1.45 var(--body); background:var(--warm); color:var(--ink); padding:0 0 40px; -webkit-font-smoothing:antialiased; }
+  :focus-visible { outline:3px solid rgba(224,38,46,.32); outline-offset:2px; }
+  [hidden] { display:none !important; }
+
+  /* kop: wit, merkstreep (rode punt van het logo, overgaand in blauw), logo + eyebrow + titel */
+  .top { position:sticky; top:0; z-index:40; background:rgba(255,255,255,.96); border-bottom:1px solid var(--line); padding-top:env(safe-area-inset-top); }
+  .top::before { content:""; position:absolute; inset:0 0 auto; height:3px; background:linear-gradient(90deg, var(--red) 0 7rem, var(--blue) 7rem); }
+  .top-row { display:flex; align-items:center; gap:14px; padding:14px 16px 12px; }
+  .top img.logo { display:block; width:92px; height:auto; }
+  .brand { padding-left:14px; border-left:1px solid var(--line); min-width:0; }
+  .eyebrow { display:block; color:var(--red-ink); font:700 .72rem/1.2 var(--body); letter-spacing:.13em; text-transform:uppercase; }
+  .top h1 { margin:2px 0 0; font:500 1.45rem/1.1 var(--display); letter-spacing:-.015em; white-space:nowrap; }
+  .ver { font:500 .75rem/1 var(--body); color:var(--mute); text-decoration:none; margin-left:6px; letter-spacing:0; } .ver:hover { color:var(--red-ink); text-decoration:underline; }
+
   main { max-width:900px; margin:0 auto; padding:16px; }
   .bar { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
-  button, .btn { font:inherit; font-weight:600; border:0; border-radius:12px; padding:14px 18px; min-height:52px; cursor:pointer; background:var(--card); color:var(--ink); box-shadow:0 1px 2px #0002; }
-  .primary { background:var(--acc); color:#fff; flex:1; text-align:center; }
-  h2 { font-size:15px; text-transform:uppercase; letter-spacing:.05em; color:var(--mute); margin:24px 4px 8px; }
-  .card { background:var(--card); border-radius:14px; padding:16px; margin-bottom:12px; box-shadow:0 1px 2px #0001; }
+  button, .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; font:600 .95rem/1.1 var(--body); border:1px solid #bdd0d7; border-radius:0; padding:12px 18px; min-height:52px; cursor:pointer; background:var(--card); color:var(--blue-ink); transition:background-color .15s, border-color .15s, color .15s; }
+  button:hover, .btn:hover { background:var(--mist); }
+  button:active, .btn:active { transform:translateY(1px); }
+  .primary { background:var(--blue); border-color:var(--blue); color:var(--ink); flex:1; }
+  .primary:hover { background:var(--blue-dark); border-color:var(--blue-dark); color:#fff; }
+  .primary .plus { color:var(--red); font-weight:800; font-size:1.2em; } .primary:hover .plus { color:#fff; }
+  .primary small { font-weight:400; opacity:.75; }
+  h2 { font:500 1.3rem/1.2 var(--display); color:var(--ink); margin:28px 2px 12px; }
+  .card { position:relative; background:var(--card); border:1px solid var(--line); box-shadow:var(--shadow); padding:16px 16px 16px 20px; margin-bottom:12px; }
+  .card::before { content:""; position:absolute; top:-1px; bottom:-1px; left:-1px; width:4px; background:var(--blue); }
   .row { display:flex; justify-content:space-between; gap:12px; align-items:baseline; }
-  .big { font-size:30px; font-weight:800; color:var(--acc); white-space:nowrap; }
+  .big { font:600 1.9rem/1.05 var(--display); color:var(--ink); white-space:nowrap; letter-spacing:-.01em; }
   .mute { color:var(--mute); font-size:14px; }
-  .code { font-weight:700; font-size:18px; }
-  .pill { display:inline-block; padding:2px 8px; border-radius:99px; font-size:13px; font-weight:600; margin:4px 4px 0 0; }
-  .warn { background:var(--warnbg); color:var(--warn); }
-  .bad { background:var(--badbg); color:var(--bad); }
-  .okp { background:#dcfce7; color:var(--ok); }
-  details { margin-top:10px; border-top:1px solid var(--line); padding-top:6px; }
-  summary { padding:10px 0; font-weight:600; cursor:pointer; min-height:44px; }
+  .code { font:700 1.05rem/1.2 var(--body); letter-spacing:.01em; }
+  .pill { display:inline-block; padding:3px 8px; border:1px solid transparent; font-size:12.5px; font-weight:600; margin:6px 6px 0 0; }
+  .warn { background:var(--warnbg); color:var(--warn); border-color:var(--warnline); }
+  .bad { background:var(--badbg); color:var(--bad); border-color:#f5c2bd; }
+  .okp { background:var(--oksoft); color:var(--ok); }
+  details { margin-top:12px; border-top:1px solid var(--line-soft); padding-top:4px; }
+  summary { padding:10px 0; font-weight:600; color:var(--blue-ink); cursor:pointer; min-height:44px; }
   label { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:6px 0; }
-  input[type=number] { font:inherit; width:110px; padding:10px; border:1px solid #cbd5e1; border-radius:10px; text-align:right; }
-  input[type=checkbox] { width:28px; height:28px; }
-  .plan div { padding:8px 0; border-bottom:1px solid var(--line); font-variant-numeric:tabular-nums; }
-  .plan div:last-child { border:0; }
+  input[type=number], select { font:inherit; color:var(--ink); width:110px; padding:10px; border:1px solid var(--line); border-radius:0; background:#fff; text-align:right; }
+  input[type=number]:hover, select:hover { border-color:var(--blue-dark); }
+  input[type=checkbox] { width:24px; height:24px; accent-color:var(--blue-dark); }
+  input.need { border-color:#d9a066 !important; background:var(--warnbg); }
+  .plan > div { padding:10px 0; border-bottom:1px solid var(--line-soft); font-variant-numeric:tabular-nums; }
+  .plan > div:last-child { border:0; }
+  .nestbtn { display:inline-flex; gap:10px; align-items:center; padding:8px 0 0; font-weight:600; }
+
+  /* tekening (tablet: ware schaal; desktop: zie .det) */
   .draw { overflow-x:auto; padding:4px 0 8px; }
-  .draw svg { display:block; font:11px system-ui, sans-serif; }
-  .draw .pc { fill:#dbeafe; stroke:var(--acc); stroke-width:1; }
-  .draw .hid, .det .hid { stroke:var(--acc); stroke-dasharray:4 3; }
-  .draw .tv, .det .tv { fill-opacity:.75; }
-  .draw .face, .det .face { fill:#1e3a8a; fill-opacity:.18; } .draw .edge, .det .edge { stroke:var(--acc); stroke-width:1; }
-  .draw .waste { fill:url(#hatch); stroke:#9ca3af; }
-  @media (min-width:1100px) {
-    main { max-width:none; padding:12px 24px; }
-    header { padding:10px 24px; } header p { display:none; }
-    .bar { margin-bottom:12px; } .bar > * { min-height:40px; padding:8px 16px; } .bar .primary { flex:none; }
-    #install, .note, #out > h2:first-child { display:none !important; }
-    main { position:relative; }
-    .phone { position:absolute; top:12px; right:24px; z-index:5; padding:4px 12px 4px 4px; gap:10px; font-size:14px; border-radius:12px; cursor:zoom-in; }
-    .phone img { width:40px; height:40px; border:0; transition:width .15s, height .15s; } .phone:hover img { width:200px; height:200px; }
-    .phone ol, .phone .mute { display:none; }
-  }
-  .desk { display:grid; grid-template-columns:280px minmax(0,1fr); gap:16px; align-items:start; }
-  .plist { display:flex; flex-direction:column; gap:2px; position:sticky; top:12px; max-height:calc(100vh - 24px); overflow:auto; background:#fff; border-radius:14px; padding:6px; }
-  .pi { display:grid; grid-template-columns:10px 1fr auto; align-items:center; gap:10px; text-align:left; padding:10px; min-height:0; font-weight:400; box-shadow:none; border-radius:10px; background:none; }
-  .pi:hover { background:#f3f4f6; } .pi.sel { background:#dbeafe; }
-  .pi .pn { font-weight:700; min-width:0; } .pi small { display:block; font-weight:400; color:var(--mute); font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .pi .n { font-weight:700; white-space:nowrap; color:var(--acc); }
-  .dot { width:10px; height:10px; border-radius:50%; } .dot.ok { background:#22c55e; } .dot.warn { background:#f59e0b; } .dot.bad { background:var(--bad); }
-  .det .big small { font-size:16px; font-weight:600; color:var(--mute); }
-  .det .ctl { display:flex; gap:14px; flex-wrap:wrap; align-items:center; margin:12px 0 4px; }
-  .det .ctl .pill { margin:0; cursor:help; }
-  .det .set { margin-left:auto; display:flex; gap:12px; color:var(--mute); font-size:13px; }
-  .det .set label { padding:0; gap:6px; } .det .set input { width:72px; padding:4px 6px; font-size:13px; border-color:var(--line); }
-  .sw { padding:0; gap:8px; font-weight:700; cursor:pointer; justify-content:flex-start; }
-  .sw input { position:absolute; opacity:0; } .sw span { width:40px; height:22px; border-radius:11px; background:#d1d5db; position:relative; transition:.15s; }
-  .sw span::after { content:''; position:absolute; left:3px; top:3px; width:16px; height:16px; border-radius:50%; background:#fff; transition:.15s; }
-  .sw input:checked + span { background:var(--acc); } .sw input:checked + span::after { left:21px; } .sw input:focus-visible + span { outline:2px solid var(--acc); outline-offset:2px; }
-  .ver { font-size:13px; font-weight:400; color:#fff; opacity:.7; text-decoration:none; margin-left:6px; vertical-align:middle; } .ver:hover { opacity:1; text-decoration:underline; }
-  .tw { overflow-x:auto; }
-  td.vk { white-space:nowrap; } td.vk select { font:inherit; font-size:14px; padding:7px 6px; border:1px solid #cbd5e1; border-radius:10px; background:#fff; }
-  td.vk input[type=number] { width:62px; margin-left:6px; } td.vk .ov { margin-left:10px; color:var(--mute); font-size:13px; }
-  input.need { border-color:#f59e0b !important; background:var(--warnbg); }
-  .primary small { font-weight:400; opacity:.8; margin-left:6px; }
-  .det.pick { display:flex; align-items:center; justify-content:center; min-height:300px; color:var(--mute); font-size:18px; }
-  .calc { display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; padding:12px 14px; margin:10px 0 4px; background:#f8fafc; border:1px solid var(--line); border-radius:12px; font-variant-numeric:tabular-nums; }
-  .calc span { display:flex; flex-direction:column; font-weight:700; font-size:17px; line-height:1.2; }
-  .calc small { font-weight:400; font-size:12px; color:var(--mute); }
-  .calc i { font-style:normal; font-size:20px; color:var(--mute); }
-  .calc .gain, .det .bh .gain { color:var(--ok); } .calc .res { color:var(--acc); }
-  .calc em { flex-basis:100%; font-style:normal; font-size:13px; color:var(--mute); }
-  .det .bh .gain { font-size:13px; font-weight:600; margin-left:auto; } .det .bh .gain + .rest { margin-left:14px; }
-  .det .zoom { display:flex; gap:6px; align-items:center; margin:8px 0; }
-  .det .zoom button { min-height:32px; padding:4px 12px; border:1px solid var(--line); box-shadow:none; font-size:15px; }
-  .det .zoom #zl { min-width:52px; text-align:center; font-weight:700; font-variant-numeric:tabular-nums; }
-  .det .zoom .mute { margin-left:8px; font-size:12px; }
-  .det .br { padding:12px 0; border-top:1px solid var(--line); }
-  .det .bh { display:flex; align-items:baseline; gap:14px; margin-bottom:6px; }
-  .det .bh > b { font-size:16px; color:var(--acc); white-space:nowrap; }
-  .det .tl { font-size:13px; color:var(--mute); white-space:pre; }
-  .det .rest { margin-left:auto; font-size:13px; color:var(--mute); } .det .rest b { font-size:15px; color:var(--ink); }
-  .det .bv { display:grid; grid-template-columns:52px minmax(0,1fr); gap:8px; }
-  .det .vl { display:flex; flex-direction:column; gap:8px; padding-top:1px; }
-  .det .vl span { display:flex; flex-direction:column; justify-content:center; font-size:12px; font-weight:700; color:var(--ink); border-right:3px solid var(--acc); padding-right:6px; text-align:right; }
-  .det .vl small { font-weight:400; color:var(--mute); }
-  .det .vw { overflow-x:auto; cursor:grab; user-select:none; } .det .vw:active { cursor:grabbing; }
-  .det .vw svg { display:block; font:12px system-ui, sans-serif; }
-  .det .pc { fill:#dbeafe; stroke:var(--acc); stroke-width:1; } .det .pc2 { fill:#93c5fd; } .det .waste { fill:url(#hatch); stroke:#e5e7eb; }
-  .nestbtn { display:inline-flex; gap:8px; align-items:center; padding:4px 0; font-weight:600; }
+  .draw svg, .det .vw svg { display:block; font:12px var(--body); }
+  .pc { fill:#eef4f6; stroke:var(--blue-ink); stroke-width:1; } .pc2 { fill:var(--blue); }
+  .tv { fill-opacity:.8; }
+  .face { fill:#10283e; fill-opacity:.16; } .edge { stroke:var(--blue-ink); stroke-width:1; } .hid { stroke:var(--blue-ink); stroke-dasharray:4 3; }
+  .waste { fill:url(#hatch); stroke:var(--line); }
+
+  /* jobs */
+  .tw { overflow-x:auto; margin-top:8px; }
   table { width:100%; border-collapse:collapse; font-size:14px; font-variant-numeric:tabular-nums; }
-  th, td { text-align:left; padding:8px 6px; border-bottom:1px solid var(--line); vertical-align:middle; }
-  th { color:var(--mute); font-weight:600; }
+  th { text-align:left; padding:9px 8px; color:var(--ink); background:#e9edef; box-shadow:inset 0 -2px 0 var(--blue-dark); font-weight:700; font-size:13px; white-space:nowrap; }
+  td { text-align:left; padding:8px; border-bottom:1px solid var(--line-soft); vertical-align:middle; }
   td input[type=number] { width:76px; padding:8px; }
-  tr.warn td { background:var(--warnbg); }
-  tr.bad td { background:var(--badbg); }
-  .empty { text-align:center; color:var(--mute); padding:40px 16px; }
-  .note { font-size:13px; color:var(--mute); margin:8px 4px; }
+  tr.warn td { background:var(--warnbg); } tr.bad td { background:var(--badbg); }
+  td.vk { white-space:nowrap; } td.vk select { width:auto; text-align:left; padding:8px 6px; font-size:14px; }
+  td.vk input[type=number] { width:62px; margin-left:6px; } td.vk .ov { margin-left:10px; color:var(--mute); font-size:13px; }
+  .x { background:none; border:0; color:var(--red-ink); padding:8px 4px; min-height:44px; } .x:hover { background:none; text-decoration:underline; }
+  .empty { text-align:center; color:var(--mute); padding:44px 16px; }
+  .note { font-size:13px; color:var(--mute); margin:8px 2px; }
+
+  /* telefoon/installeren */
   .phone { display:none; gap:20px; align-items:center; }
-  .phone img { flex:none; border:1px solid var(--line); border-radius:8px; }
+  .phone img { flex:none; border:1px solid var(--line); }
   .phone ol { margin:8px 0; padding-left:20px; }
   @media (hover:hover) and (pointer:fine) { .phone { display:flex; } }
   .install { display:flex; gap:12px; align-items:center; justify-content:space-between; }
-  .install[hidden] { display:none; }
   @media (display-mode: standalone) { .phone, .install { display:none !important; } }
-  .x { background:none; box-shadow:none; color:var(--bad); padding:8px 12px; min-height:44px; }
+
+  /* desktop: knoppen in de kop, lijst links, berekening en indeling rechts */
+  @media (min-width:1100px) {
+    .top-row { padding:16px 24px 14px; gap:18px; } .top img.logo { width:120px; } .top h1 { font-size:1.6rem; }
+    .top .bar { margin:0 0 0 auto; } .top .bar > * { min-height:42px; padding:8px 16px; } .top .bar .primary { flex:none; }
+    main { max-width:none; padding:20px 24px; }
+    main > .bar, #install, .note, #out > h2:first-child { display:none !important; }
+    .phone { padding:4px 12px 4px 4px; gap:10px; margin:0; font-size:13px; box-shadow:none; cursor:zoom-in; }
+    .phone::before { display:none; }
+    .phone img { width:42px; height:42px; border:0; transition:width .15s, height .15s; } .phone:hover img { width:200px; height:200px; }
+    .phone ol, .phone .mute { display:none; }
+  }
+  @media (max-width:1099px) { .top .bar, .top .phone { display:none !important; } }
+  .desk { display:grid; grid-template-columns:290px minmax(0,1fr); gap:20px; align-items:start; }
+  .plist { display:flex; flex-direction:column; position:sticky; top:96px; max-height:calc(100vh - 116px); overflow:auto; background:#fff; border:1px solid var(--line); box-shadow:var(--shadow); }
+  .pi { display:grid; grid-template-columns:8px 1fr auto; align-items:center; gap:12px; text-align:left; padding:12px 14px; min-height:0; font-weight:400; color:var(--ink); border:0; border-bottom:1px solid var(--line-soft); border-left:3px solid transparent; background:none; }
+  .pi:hover { background:var(--mist); } .pi.sel { background:var(--blue-soft); border-left-color:var(--red); }
+  .pi .pn { font-weight:700; min-width:0; } .pi small { display:block; font-weight:400; color:var(--mute); font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .pi .n { font:600 1rem/1 var(--display); white-space:nowrap; color:var(--ink); }
+  .dot { width:8px; height:8px; } .dot.ok { background:#2f8f6a; } .dot.warn { background:#d9893a; } .dot.bad { background:var(--red); }
+  .det { margin:0; padding:22px 24px 22px 28px; }
+  .det .big small { font:500 1rem var(--body); color:var(--mute); }
+  .det .code { font:500 1.35rem/1.15 var(--display); }
+  .det.pick { display:flex; align-items:center; justify-content:center; min-height:320px; color:var(--mute); font-size:17px; }
+  .det .ctl { display:flex; gap:14px; flex-wrap:wrap; align-items:center; margin:16px 0 6px; padding-top:14px; border-top:1px solid var(--line-soft); }
+  .det .ctl .pill { margin:0; cursor:help; }
+  .det .set { margin-left:auto; display:flex; flex-wrap:wrap; gap:14px; color:var(--mute); font-size:13px; }
+  .det .set label { padding:0; gap:6px; } .det .set input { width:76px; padding:6px 8px; font-size:13px; }
+  .sw { padding:0; gap:10px; font-weight:700; cursor:pointer; justify-content:flex-start; }
+  .sw input { position:absolute; opacity:0; } .sw span { width:42px; height:22px; background:#cfd6d9; position:relative; transition:.15s; }
+  .sw span::after { content:''; position:absolute; left:3px; top:3px; width:16px; height:16px; background:#fff; transition:.15s; }
+  .sw input:checked + span { background:var(--blue-dark); } .sw input:checked + span::after { left:23px; } .sw input:focus-visible + span { outline:3px solid rgba(224,38,46,.32); outline-offset:2px; }
+  .calc { display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; padding:14px 16px; margin:12px 0 6px; background:#f7fafb; border:1px solid var(--blue-line); font-variant-numeric:tabular-nums; }
+  .calc span { display:flex; flex-direction:column; font:600 1.1rem/1.2 var(--display); }
+  .calc small { font:400 12px var(--body); color:var(--mute); }
+  .calc i { font-style:normal; font-size:20px; color:var(--blue-dark); }
+  .calc .gain, .det .bh .gain { color:var(--ok); } .calc .res { color:var(--red-ink); }
+  .calc em { flex-basis:100%; font-style:normal; font-size:13px; color:var(--mute); }
+  .det .zoom { display:flex; gap:6px; align-items:center; margin:12px 0 6px; }
+  .det .zoom button { min-height:34px; padding:4px 12px; font-size:15px; }
+  .det .zoom #zl { min-width:56px; text-align:center; font-weight:700; font-variant-numeric:tabular-nums; }
+  .det .zoom .mute { margin-left:8px; font-size:12px; }
+  .det .br { padding:14px 0; border-top:1px solid var(--line-soft); }
+  .det .bh { display:flex; align-items:baseline; gap:14px; margin-bottom:8px; }
+  .det .bh > b { font:600 1rem/1 var(--display); color:var(--ink); white-space:nowrap; }
+  .det .tl { font-size:13px; color:var(--mute); white-space:pre; }
+  .det .bh .gain { font-size:13px; font-weight:600; margin-left:auto; } .det .bh .gain + .rest { margin-left:14px; }
+  .det .rest { margin-left:auto; font-size:13px; color:var(--mute); } .det .rest b { font-size:15px; color:var(--ink); }
+  .det .bv { display:grid; grid-template-columns:52px minmax(0,1fr); gap:8px; }
+  .det .vl { display:flex; flex-direction:column; gap:8px; padding-top:1px; }
+  .det .vl span { display:flex; flex-direction:column; justify-content:center; font-size:12px; font-weight:700; color:var(--ink); border-right:3px solid var(--blue); padding-right:6px; text-align:right; }
+  .det .vl small { font-weight:400; color:var(--mute); }
+  .det .vw { overflow-x:auto; cursor:grab; user-select:none; } .det .vw:active { cursor:grabbing; }
 </style>
 </head>
 <body>
-<header>
-  <h1>Zaaglijst · inkoop <a class="ver" href="https://github.com/keltvan/wilvo-zaaglijst/blob/main/CHANGELOG.md" target="_blank" rel="noopener" title="Wat is er veranderd">v1.4.1</a></h1>
-  <p>Foto of PDF van de job in → aantal staven per profiel uit</p>
+<header class="top">
+  <div class="top-row">
+    <img class="logo" src="assets/wilvo-logo.svg" alt="WILVO" width="120" height="56">
+    <div class="brand"><span class="eyebrow">Zagerij · inkoop</span>
+      <h1>Zaaglijst <a class="ver" href="https://github.com/keltvan/wilvo-zaaglijst/blob/main/CHANGELOG.md" target="_blank" rel="noopener" title="Wat is er veranderd">v1.5.0</a></h1></div>
+    <div class="bar">
+      <label class="btn primary" for="file"><span class="plus">+</span> Job toevoegen <small>foto of PDF</small></label>
+      <button class="copy">Kopieer bestellijst</button>
+      <button class="clear">Alles wissen</button>
+    </div>
+    <div class="card phone" title="Scan met je telefoon of tablet">
+      <img src="icons/qr.svg" width="150" height="150" alt="QR-code naar de Zaaglijst-app">
+      <div><b>Op telefoon of tablet</b>
+        <ol><li>Scan de code met de camera van je telefoon.</li>
+          <li>Android: tik op <b>Installeren</b>. iPhone/iPad: tik op <b>Deel</b> en dan <b>Zet op beginscherm</b>.</li></ol>
+        <div class="mute">Daarna staat de Zaaglijst als app op je beginscherm.</div></div>
+    </div>
+  </div>
 </header>
 <main>
   <div class="bar">
-    <label class="btn primary" for="file">+ Job toevoegen <small>foto of PDF</small></label>
+    <label class="btn primary" for="file"><span class="plus">+</span> Job toevoegen <small>foto of PDF</small></label>
     <input id="file" type="file" accept="application/pdf,.pdf,image/*" multiple hidden>
-    <button id="copy">Kopieer bestellijst</button>
-    <button id="clear">Alles wissen</button>
-  </div>
-  <div class="card phone">
-    <img src="icons/qr.svg" width="150" height="150" alt="QR-code naar de Zaaglijst-app">
-    <div><b>Zaaglijst op je telefoon of tablet</b>
-      <ol><li>Scan de code met de camera van je telefoon.</li>
-        <li>Android: tik op <b>Installeren</b>. iPhone/iPad: tik op <b>Deel</b> en dan <b>Zet op beginscherm</b>.</li></ol>
-      <div class="mute">Daarna staat de Zaaglijst als app op je beginscherm.</div></div>
+    <button class="copy">Kopieer bestellijst</button>
+    <button class="clear">Alles wissen</button>
   </div>
   <div class="card install" id="install" hidden><span id="install-txt"></span><button id="install-btn" class="primary" style="flex:none" hidden>Installeren</button></div>
   <div id="msg"></div>
@@ -191,12 +231,20 @@ async function addFiles(e) {
   save(); render(msgs);
 }
 $('#file').addEventListener('change', addFiles);
-$('#clear').onclick = () => { if (confirm('Alle jobs wissen? Instellingen per profiel blijven bewaard.')) { state.jobs = []; sel = null; save(); render(); } };
-$('#copy').onclick = async () => {
+// buttons exist twice: in the header (desktop) and below it (tablet/phone)
+for (const b of document.querySelectorAll('.clear')) b.onclick = () => { if (confirm('Alle jobs wissen? Instellingen per profiel blijven bewaard.')) { state.jobs = []; sel = null; save(); render(); } };
+for (const b of document.querySelectorAll('.copy')) b.onclick = async () => {
   const text = profiles().map(p => `${p.part}\t${p.desc}\t${p.badCheck ? 'NOG CONTROLEREN' : p.result.bars.length + ' st'} à ${p.s.bar} mm\t(${fmt(p.totalMm / 1000, 2)} m nodig)`).join('\n');
   try { await navigator.clipboard.writeText(text); render(['Bestellijst gekopieerd.']); }
   catch { prompt('Kopieer de bestellijst:', text); }
 };
+
+// sizes from the description ("Koker 100x 50x4"): height = what the slant runs across (side "tov ... zijde"), else the smaller
+function autoDims(mitreRows, dims) {
+  const lo = dims.length ? Math.min(...dims) : 0, hi = dims.length ? Math.max(...dims) : 0;
+  const autoH = mitreRows.find(r => r.cut?.d)?.cut.d || lo || '';
+  return { autoH, autoT: dims.length ? (autoH === lo ? hi : lo) : '' };
+}
 
 function settings(part, rows) {
   const hint = rows.find(r => r.barHint)?.barHint;
@@ -209,7 +257,7 @@ function profiles() {
   return Object.values(by).map(rows => {
     const part = rows[0].part;
     const s = settings(part, rows);
-    // "schuin over" per profile overrides the size from the description (needed when the text has none)
+    // height per profile overrides the size from the description (needed when the text has none)
     const cutOf = r => r.cut ? { ...r.cut, d: s.cutD || r.cut.d } : null;
     const pieces = rows.flatMap(r => Array(Math.round(r.qty * r.perProduct)).fill({ len: r.mmPer / r.perProduct, mitre: r.mitre, cut: cutOf(r), seq: r.seq, job: r.job }));
     const result = cutBars(pieces, { bar: s.bar, kerf: s.kerf, trim: s.trim, nest: s.nest });
@@ -220,14 +268,14 @@ function profiles() {
     const m = rows.filter(r => r.mitre), noSize = m.filter(r => r.cut?.shape && !cutOf(r).d).length;
     return { part, desc, rows, s, pieces, result, plain, dims, totalMm: rows.reduce((a, r) => a + r.qty * r.mmPer, 0),
       unsure: rows.filter(r => r.source !== 'tekst').length, badCheck: rows.filter(r => !r.check).length, mitre: m.length > 0,
-      shapeUnsure: m.filter(r => !r.cut?.sure && cutOf(r)?.d).length, noSize, autoD: m.find(r => r.cut?.d)?.cut.d || '' };
+      shapeUnsure: m.filter(r => !r.cut?.sure && cutOf(r)?.d).length, noSize, ...autoDims(m, dims) };
   }).sort((a, b) => a.part.localeCompare(b.part));
 }
 
 // sd = size the slant runs across (side view height), td = the other size (top view height)
+// height (side view, the slant runs across it) and thickness (top view): typed in per profile, else from the text
 function viewDims(p) {
-  const sd = p.pieces.find(x => x.cut?.d)?.cut.d || Math.min(...p.dims) || 20;
-  const td = p.dims.length ? (sd === Math.min(...p.dims) ? Math.max(...p.dims) : Math.min(...p.dims)) : sd;
+  const sd = p.s.cutD || p.autoH || 20, td = p.s.thk || p.autoT || sd;
   return { sd, td };
 }
 
@@ -280,12 +328,17 @@ function mitreCell(r, i) {
   h += `<input type="number" min="1" max="89" step="0.5" data-row="${i}" data-f="cutAngle" value="${r.cut.a[0] || r.cut.a[1]}" aria-label="Hoek in graden" title="Hoek vanaf haaks${r.cut.a[0] !== r.cut.a[1] && r.cut.a[1] ? ` (nu ${r.cut.a.join('° en ')}°)` : ''}">°`;
   // without the profile size the slant can't be drawn or nested: ask for it right here (stored per profile)
   const part = profileOf(r), d = state.parts[part]?.cutD;
-  return h + `<span class="ov" data-part="${esc(part)}">over <input type="number" min="0" data-k="cutD" value="${d || ''}" placeholder="${r.cut.d || ''}" aria-label="Profielmaat waarover de schuine snede loopt (mm)"${d || r.cut.d ? '' : ' class="need"'}> mm</span>`;
+  if (r.cut.d && !d) return h; // height known from the text; change it at the profile if needed
+  return h + `<span class="ov" data-part="${esc(part)}">hoogte <input type="number" min="0" data-k="cutD" value="${d || ''}" placeholder="${r.cut.d || ''}" aria-label="Hoogte van het profiel in mm (de schuine snede loopt hierover)"${d || r.cut.d ? '' : ' class="need"'}> mm</span>`;
 }
+
+// "10× 937 · 3× 889": pieces per length in one bar
+const tally = b => { const t = new Map(); for (const q of b.pieces) { const k = fmt(q.len, q.len % 1 ? 1 : 0); t.set(k, (t.get(k) || 0) + 1); }
+  return [...t].map(([k, c]) => `${c}× ${k}`).join('  ·  '); };
 
 // every bar is drawn, also identical ones: the sawyer counts them off one by one
 function planHtml(p) {
-  return p.result.bars.map((b, i) => `<div><b>Staaf ${i + 1}</b> ${esc(b.pieces.map(q => fmt(q.len) + (q.mitre ? '∠' : '')).join(' · '))} — rest ${fmt(b.rest)} mm
+  return p.result.bars.map((b, i) => `<div><b>Staaf ${i + 1}</b> <span class="mute">${tally(b)} · rest ${fmt(b.rest)} mm</span>
     <div class="draw">${barSvg(b, p)}</div></div>`).join('');
 }
 
@@ -294,7 +347,7 @@ const pills = p => `${p.result.tooLong.length ? `<span class="pill bad">${p.resu
   ${p.badCheck ? `<span class="pill bad">${p.badCheck} rode regel(s): mm × aantal klopt niet. Eerst corrigeren bij de job hieronder, dan pas bestellen</span>` : ''}
   ${p.unsure ? `<span class="pill warn">${p.unsure} regel(s): stuks per product aangenomen</span>` : ''}
   ${p.shapeUnsure ? `<span class="pill warn">${p.shapeUnsure} schuine regel(s): vorm of zijde aangenomen, controleer de tekening</span>` : ''}
-  ${p.noSize ? `<span class="pill warn">Profielmaat onbekend: vul bij instellingen "schuine snede over profielmaat" in</span>` : ''}`;
+  ${p.noSize ? `<span class="pill warn">Hoogte onbekend: vul bij instellingen de hoogte van het profiel in</span>` : ''}`;
 const count = p => p.badCheck ? '?' : `${p.result.bars.length} × ${fmt(p.s.bar)}`;
 
 // Desktop: profile list left, the selected profile's bars right, drawn to the panel width.
@@ -326,7 +379,7 @@ function deskHtml(ps) {
     p.badCheck && ['bad', `${p.badCheck} rode regel${p.badCheck > 1 ? 's' : ''}`, 'mm × aantal klopt niet met de meters op de job. Corrigeer bij de job hieronder, dan pas bestellen.'],
     p.unsure && ['warn', `${p.unsure} aantal aangenomen`, 'Stuks per product staat niet eenduidig op de job; 1 aangenomen. Controleer bij de job hieronder.'],
     p.shapeUnsure && ['warn', `${p.shapeUnsure} vorm aangenomen`, 'Zaagvorm of zijde van de schuinte niet eenduidig; controleer de tekening. Stel het per regel in bij de job hieronder (kolom Verstek).'],
-    p.noSize && ['warn', 'maat schuine kant?', 'De omschrijving noemt geen profielmaat. Vul bij "schuin over" in over welke maat (mm) de schuine snede loopt; tot dan telt de app deze stukken als recht.'],
+    p.noSize && ['warn', 'hoogte onbekend', 'De omschrijving noemt geen profielmaat. Vul de hoogte in (de maat waarover de schuine snede loopt); tot dan telt de app deze stukken als recht.'],
   ].filter(Boolean).map(([c, t, tip]) => `<span class="pill ${c}" title="${esc(tip)}">${t}</span>`).join('');
   return `<div class="desk"><nav class="plist">${list}</nav>
     <section class="card det" data-part="${esc(p.part)}">
@@ -338,7 +391,8 @@ function deskHtml(ps) {
         <span class="set"><label>staaf <input type="number" data-k="bar" value="${p.s.bar}" min="1"></label>
         <label>zaagsnede <input type="number" data-k="kerf" value="${p.s.kerf}" min="0" step="0.5"></label>
         <label>eind <input type="number" data-k="trim" value="${p.s.trim}" min="0"></label>
-        ${p.mitre ? `<label title="Over welke profielmaat de schuine snede loopt">schuin over <input type="number" data-k="cutD" value="${p.s.cutD || ''}" placeholder="${p.autoD}" min="0"${p.noSize ? ' class="need"' : ''}></label>` : ''}</span></div>
+        <label title="Hoogte in het zijaanzicht; een schuine snede loopt hierover">hoogte <input type="number" data-k="cutD" value="${p.s.cutD || ''}" placeholder="${p.autoH}" min="0"${p.noSize ? ' class="need"' : ''}></label>
+        <label title="Dikte in het bovenaanzicht">dikte <input type="number" data-k="thk" value="${p.s.thk || ''}" placeholder="${p.autoT}" min="0"></label></span></div>
       ${calcHtml(p)}
       ${p.s.nest ? `<div class="zoom"><button data-z="-" aria-label="Uitzoomen">−</button><span id="zl">100%</span><button data-z="+" aria-label="Inzoomen">+</button><button data-z="0">Passend</button>
         <span class="mute">Ctrl + scrollen = zoomen · slepen = schuiven</span></div>
@@ -356,8 +410,6 @@ function drawDesk(ps, anchor) {
   const viewW = box.clientWidth - 60, sx = (viewW - 8) / p.s.bar * zoom;
   const ht = Math.min(240, Math.max(36, td * sx)), hs = Math.min(240, Math.max(36, sd * sx));
   const v = { sx, ht, hs, seq: zoom > 1 };
-  const tally = b => { const t = new Map(); for (const q of b.pieces) { const k = fmt(q.len, q.len % 1 ? 1 : 0); t.set(k, (t.get(k) || 0) + 1); }
-    return [...t].map(([k, c]) => `${c}× ${k}`).join('  ·  '); };
   const labels = `<div class="vl"><span style="height:${ht}px">boven<small>${fmt(td)}</small></span>${hs ? `<span style="height:${hs}px">zij<small>${fmt(sd)}</small></span>` : ''}</div>`;
   box.innerHTML = p.result.bars.map((b, i) => `<div class="br"><div class="bh"><b>Staaf ${i + 1}</b><span class="tl">${tally(b)}</span>${p.s.nest && p.mitre ? `<span class="gain">nesten −${fmt(sumLen(b) + (b.pieces.length - 1) * p.s.kerf - b.used)}</span>` : ''}<span class="rest">rest <b>${fmt(b.rest)}</b></span></div>
     <div class="bv">${labels}<div class="vw">${barSvg(b, p, v)}</div></div></div>`).join('');
@@ -384,7 +436,8 @@ function render(msgs = []) {
         <label>Staaflengte (mm) <input type="number" data-k="bar" value="${p.s.bar}" min="1"></label>
         <label>Zaagsnede (mm) <input type="number" data-k="kerf" value="${p.s.kerf}" min="0" step="0.5"></label>
         <label>Onbruikbaar eind (mm) <input type="number" data-k="trim" value="${p.s.trim}" min="0"></label>
-        ${p.mitre ? `<label>Schuine snede over profielmaat (mm) <input type="number" data-k="cutD" value="${p.s.cutD || ''}" placeholder="${p.autoD}" min="0"${p.noSize ? ' class="need"' : ''}></label>` : ''}
+        <label>Hoogte (mm) — zijaanzicht, schuine snede loopt hierover <input type="number" data-k="cutD" value="${p.s.cutD || ''}" placeholder="${p.autoH}" min="0"${p.noSize ? ' class="need"' : ''}></label>
+        <label>Dikte (mm) — bovenaanzicht <input type="number" data-k="thk" value="${p.s.thk || ''}" placeholder="${p.autoT}" min="0"></label>
       </details></div>`;
   }
   h += `<p class="note">∠ = verstek. Oranje = controleren: het aantal stuks per product staat niet eenduidig op de job. Rood = getal verkeerd gelezen, eerst corrigeren. Pas het aan bij de job hieronder.</p>`;

@@ -3,6 +3,12 @@
 Versienummer staat rechtsboven in de app. Nieuwe functie = tweede cijfer omhoog, reparatie = derde cijfer.
 Elke versie heeft een git-tag (`v1.3.0` enz.), zodat je altijd terug kunt naar een vorige versie.
 
+## 1.5.0 — 2026-11-21
+- WILVO-huisstijl zoals de Engineering Hub: logo en merkstreep in de kop, Bitter en Roboto, rechte hoeken, lichtblauwe knoppen met rood accent. Op desktop staan de knoppen in de kop.
+- Hoogte en dikte per profiel: hoogte = zijaanzicht (de schuine snede loopt hierover), dikte = bovenaanzicht. Ingevuld uit de omschrijving als die een maat noemt, anders zelf invullen. Vervangt "schuin over".
+- Jobtabel vraagt de hoogte alleen nog als die onbekend is.
+- Tablet: per staaf een korte telling ("10× 937 · 3× 889") in plaats van alle lengtes achter elkaar.
+
 ## 1.4.1 — 2026-11-21
 - Verstek-kolom vraagt direct de profielmaat ("over … mm"), oranje zolang die ontbreekt. Eerder stond die vraag alleen in het profielpaneel, waardoor een ingestelde verstek ongemerkt als recht werd gerekend.
 
